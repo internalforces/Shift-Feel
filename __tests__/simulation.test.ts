@@ -99,6 +99,58 @@ describe('vehicle simulation', () => {
     expect(reversing.speed).toBeLessThan(0);
   });
 
+  it('preserves reverse momentum when the clutch is disengaged', () => {
+    const reversing = {
+      ...INITIAL_VEHICLE_STATE,
+      speed: -8,
+      gear: -1 as const,
+    };
+    const coasting = stepSimulation(
+      reversing,
+      { throttle: 0, clutch: 1 },
+      0.1,
+    );
+
+    expect(coasting.speed).toBeLessThan(0);
+    expect(coasting.speed).toBeGreaterThan(reversing.speed);
+  });
+
+  it('preserves reverse momentum after shifting to neutral', () => {
+    const reversing = {
+      ...INITIAL_VEHICLE_STATE,
+      speed: -8,
+      gear: -1 as const,
+    };
+    const neutral = requestGear(reversing, 0, 1);
+    const coasting = stepSimulation(
+      neutral,
+      { throttle: 0, clutch: 0 },
+      0.1,
+    );
+
+    expect(coasting.gear).toBe(0);
+    expect(coasting.speed).toBeLessThan(0);
+    expect(coasting.speed).toBeGreaterThan(reversing.speed);
+  });
+
+  it('does not stall when throttle is released while reversing at speed', () => {
+    const reversing = {
+      ...INITIAL_VEHICLE_STATE,
+      rpm: 1400,
+      speed: -8,
+      gear: -1 as const,
+    };
+    const coasting = stepSimulation(
+      reversing,
+      { throttle: 0, clutch: 0 },
+      0.1,
+    );
+
+    expect(coasting.engineRunning).toBe(true);
+    expect(coasting.feedback).not.toBe('stalled');
+    expect(coasting.speed).toBeLessThan(0);
+  });
+
   it('rejects reverse while the vehicle is moving forward', () => {
     const movingForward = { ...INITIAL_VEHICLE_STATE, speed: 12 };
     const shifted = requestGear(movingForward, -1, 1);
