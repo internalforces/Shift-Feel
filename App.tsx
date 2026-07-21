@@ -8,10 +8,9 @@
 import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { DrivingControls } from './app/features/controls/DrivingControls';
 import { Dashboard } from './app/features/dashboard/Dashboard';
 import { useVehicleSimulation } from './app/features/engine-sim/useVehicleSimulation';
-import { GearSelector } from './app/features/gearbox/GearSelector';
-import { PedalControls } from './app/features/pedals/PedalControls';
 
 function App() {
   return (
@@ -47,15 +46,14 @@ function AppContent() {
         feedback={vehicle.feedback}
       />
 
-      <View style={styles.controls}>
-        <GearSelector selectedGear={vehicle.gear} onSelect={selectGear} />
-        <PedalControls
-          clutch={input.clutch}
-          throttle={input.throttle}
-          onClutchChange={clutch => updateInput({ clutch })}
-          onThrottleChange={throttle => updateInput({ throttle })}
-        />
-      </View>
+      <DrivingControls
+        selectedGear={vehicle.gear}
+        clutch={input.clutch}
+        throttle={input.throttle}
+        onSelectGear={selectGear}
+        onClutchChange={clutch => updateInput({ clutch })}
+        onThrottleChange={throttle => updateInput({ throttle })}
+      />
 
       <Text style={styles.guide}>
         클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히 놓아보세요
@@ -96,11 +94,6 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   restartText: { color: '#0D1117', fontSize: 12, fontWeight: '800' },
-  controls: {
-    flex: 1,
-    gap: 12,
-    marginTop: 16,
-  },
   guide: {
     color: '#7D8590',
     fontSize: 11,
