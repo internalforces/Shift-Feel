@@ -34,6 +34,9 @@ const approach = (
   deltaSeconds: number,
 ) => current + (target - current) * clamp(rate * deltaSeconds, 0, 1);
 
+const applyDrag = (speed: number, amount: number) =>
+  Math.sign(speed) * Math.max(0, Math.abs(speed) - amount);
+
 /** Returns clutch engagement where 0 is disconnected and 1 is fully connected. */
 export function getClutchEngagement(clutchPedal: number): number {
   const releasedAmount = 1 - clamp(clutchPedal, 0, 1);
@@ -94,7 +97,7 @@ export function stepSimulation(
     return {
       ...state,
       rpm: 0,
-      speed: Math.max(0, state.speed - ENGINE_CONFIG.dragPerSecond * delta),
+      speed: applyDrag(state.speed, ENGINE_CONFIG.dragPerSecond * delta),
       feedback: 'stalled',
     };
   }
@@ -117,7 +120,7 @@ export function stepSimulation(
   }
 
   const gearConfig = GEAR_CONFIG[state.gear];
-  const wheelRpm = Math.max(0, state.speed * gearConfig.rpmPerKph);
+  const wheelRpm = Math.abs(state.speed) * gearConfig.rpmPerKph;
   const coupledTarget = Math.max(
     ENGINE_CONFIG.idleRpm * (0.75 + throttle * 0.25),
     wheelRpm + throttle * 900,
@@ -131,7 +134,7 @@ export function stepSimulation(
 
   const shouldStall =
     engagement > 0.85 &&
-    state.speed < 2 &&
+    Math.abs(state.speed) < 2 &&
     throttle < 0.12 &&
     rpm < ENGINE_CONFIG.stallRpm + 250;
 
@@ -141,9 +144,9 @@ export function stepSimulation(
 
   const direction = state.gear === -1 ? -1 : 1;
   const acceleration = throttle * gearConfig.acceleration * engagement;
-  const drag = ENGINE_CONFIG.dragPerSecond * (state.speed > 0 ? 1 : 0);
+  const speedAfterDrive = state.speed + acceleration * direction * delta;
   const speed = clamp(
-    state.speed + (acceleration * direction - drag) * delta,
+    applyDrag(speedAfterDrive, ENGINE_CONFIG.dragPerSecond * delta),
     state.gear === -1 ? -gearConfig.maxSpeed : 0,
     state.gear === -1 ? 0 : gearConfig.maxSpeed,
   );
