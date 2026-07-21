@@ -151,6 +151,18 @@ describe('vehicle simulation', () => {
     expect(coasting.speed).toBeLessThan(0);
   });
 
+  it('flags reverse re-engagement with a large RPM mismatch', () => {
+    const reversingInNeutral = {
+      ...INITIAL_VEHICLE_STATE,
+      rpm: 850,
+      speed: -20,
+    };
+    const shifted = requestGear(reversingInNeutral, -1, 1);
+
+    expect(shifted.gear).toBe(-1);
+    expect(shifted.feedback).toBe('jerk');
+  });
+
   it('rejects reverse while the vehicle is moving forward', () => {
     const movingForward = { ...INITIAL_VEHICLE_STATE, speed: 12 };
     const shifted = requestGear(movingForward, -1, 1);
