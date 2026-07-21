@@ -89,6 +89,47 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
+  it('rejects a raw release between two gear gates', async () => {
+    const { renderer, responder, onSelectGear } = await renderControls();
+    const betweenGates = {
+      identifier: 2,
+      locationX: 16 + 268 * 0.34,
+      locationY: 40 + 190 * 0.2,
+    };
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(touchEvent([betweenGates]));
+      responder.props.onResponderEnd(touchEvent([]));
+    });
+
+    expect(onSelectGear).not.toHaveBeenCalled();
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
+  it('keeps a pedal pressed above its edge without claiming a gear', async () => {
+    const {
+      renderer,
+      responder,
+      onSelectGear,
+      onClutchChange,
+    } = await renderControls();
+    const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
+    const abovePedal = { identifier: 1, locationX: 64, locationY: 20 };
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(touchEvent([clutchTouch]));
+      responder.props.onResponderMove(touchEvent([abovePedal]));
+    });
+
+    expect(onClutchChange).toHaveBeenLastCalledWith(1);
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderEnd(touchEvent([]));
+    });
+    expect(onSelectGear).not.toHaveBeenCalled();
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
   it('cancels a gear drag when the responder is terminated', async () => {
     const { renderer, responder, onSelectGear } = await renderControls();
     const gearTouch = { identifier: 2, locationX: 236, locationY: 80 };
