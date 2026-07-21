@@ -5,7 +5,14 @@
  * @format
  */
 
-import { Pressable, StatusBar, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { DrivingControls } from './app/features/controls/DrivingControls';
@@ -26,8 +33,12 @@ function AppContent() {
     useVehicleSimulation();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator
+      >
+        <View style={styles.header}>
         <View>
           <Text style={styles.eyebrow}>MANUAL DRIVE LAB</Text>
           <Text style={styles.title}>SHIFT FEEL</Text>
@@ -55,17 +66,21 @@ function AppContent() {
         onThrottleChange={throttle => updateInput({ throttle })}
       />
 
-      <Text style={styles.guide}>
-        클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히 놓아보세요
-      </Text>
+        <Text style={styles.guide}>
+          클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히 놓아보세요
+        </Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#0D1117',
+  },
+  container: {
+    flexGrow: 1,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
