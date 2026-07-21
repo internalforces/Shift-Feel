@@ -1,24 +1,8 @@
-import { useMemo, useRef } from 'react';
-import {
-  PanResponder,
-  StyleSheet,
-  Text,
-  View,
-  type GestureResponderEvent,
-} from 'react-native';
-
-import { pedalValuesFromTouches } from './pedalMath';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface PedalControlsProps {
   clutch: number;
   throttle: number;
-  onClutchChange: (value: number) => void;
-  onThrottleChange: (value: number) => void;
-}
-
-interface ControlSize {
-  width: number;
-  height: number;
 }
 
 interface PedalMeterProps {
@@ -56,55 +40,19 @@ function PedalMeter({ label, value, accent, showBiteZone }: PedalMeterProps) {
 export function PedalControls({
   clutch,
   throttle,
-  onClutchChange,
-  onThrottleChange,
 }: PedalControlsProps) {
-  const sizeRef = useRef<ControlSize>({ width: 0, height: 0 });
-  const callbacksRef = useRef({ onClutchChange, onThrottleChange });
-  callbacksRef.current = { onClutchChange, onThrottleChange };
-
-  const updateFromTouches = (event: GestureResponderEvent) => {
-    const values = pedalValuesFromTouches(
-      event.nativeEvent.touches,
-      sizeRef.current.width,
-      sizeRef.current.height,
-    );
-    callbacksRef.current.onClutchChange(values.clutch);
-    callbacksRef.current.onThrottleChange(values.throttle);
-  };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: updateFromTouches,
-        onPanResponderStart: updateFromTouches,
-        onPanResponderMove: updateFromTouches,
-        onPanResponderEnd: updateFromTouches,
-        onPanResponderRelease: () => {
-          callbacksRef.current.onClutchChange(0);
-          callbacksRef.current.onThrottleChange(0);
-        },
-        onPanResponderTerminate: () => {
-          callbacksRef.current.onClutchChange(0);
-          callbacksRef.current.onThrottleChange(0);
-        },
-        onPanResponderTerminationRequest: () => false,
-      }),
-    [],
-  );
-
   return (
     <View
       accessibilityLabel="dual pedal controls"
-      onLayout={event => {
-        sizeRef.current = event.nativeEvent.layout;
-      }}
+      pointerEvents="none"
       style={styles.container}
-      {...panResponder.panHandlers}
     >
-      <PedalMeter label="CLUTCH" value={clutch} accent="#8B949E" showBiteZone />
+      <PedalMeter
+        label="CLUTCH"
+        value={clutch}
+        accent="#8B949E"
+        showBiteZone
+      />
       <PedalMeter label="THROTTLE" value={throttle} accent="#F0883E" />
     </View>
   );
