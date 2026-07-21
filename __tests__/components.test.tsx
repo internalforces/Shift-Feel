@@ -1,9 +1,8 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 
+import { DrivingControls } from '../app/features/controls/DrivingControls';
 import { Dashboard } from '../app/features/dashboard/Dashboard';
-import { GearSelector } from '../app/features/gearbox/GearSelector';
-import { PedalControls } from '../app/features/pedals/PedalControls';
 
 describe('driving controls', () => {
   it('renders dashboard values and stall feedback', async () => {
@@ -18,28 +17,19 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
-  it('renders the draggable gear pattern', async () => {
-    const onSelect = jest.fn();
-    let renderer!: ReactTestRenderer.ReactTestRenderer;
-    await ReactTestRenderer.act(() => {
-      renderer = ReactTestRenderer.create(
-        <GearSelector selectedGear={1} onSelect={onSelect} />,
-      );
-    });
-
-    expect(renderer.toJSON()).toBeTruthy();
-    await ReactTestRenderer.act(() => renderer.unmount());
-  });
-
-  it('renders independent continuous pedal values', async () => {
+  it('renders the shared multi-touch driving controls', async () => {
+    const onSelectGear = jest.fn(() => true);
     const onClutchChange = jest.fn();
     const onThrottleChange = jest.fn();
     let renderer!: ReactTestRenderer.ReactTestRenderer;
+
     await ReactTestRenderer.act(() => {
       renderer = ReactTestRenderer.create(
-        <PedalControls
+        <DrivingControls
+          selectedGear={1}
           clutch={0.5}
           throttle={0.75}
+          onSelectGear={onSelectGear}
           onClutchChange={onClutchChange}
           onThrottleChange={onThrottleChange}
         />,
