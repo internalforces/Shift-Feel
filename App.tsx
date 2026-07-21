@@ -39,32 +39,32 @@ function AppContent() {
         showsVerticalScrollIndicator
       >
         <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>MANUAL DRIVE LAB</Text>
-          <Text style={styles.title}>SHIFT FEEL</Text>
+          <View>
+            <Text style={styles.eyebrow}>MANUAL DRIVE LAB</Text>
+            <Text style={styles.title}>SHIFT FEEL</Text>
+          </View>
+          {!vehicle.engineRunning && (
+            <Pressable style={styles.restartButton} onPress={startEngine}>
+              <Text style={styles.restartText}>시동 걸기</Text>
+            </Pressable>
+          )}
         </View>
-        {!vehicle.engineRunning && (
-          <Pressable style={styles.restartButton} onPress={startEngine}>
-            <Text style={styles.restartText}>시동 걸기</Text>
-          </Pressable>
-        )}
-      </View>
 
-      <Dashboard
-        rpm={vehicle.rpm}
-        speed={vehicle.speed}
-        gear={vehicle.gear}
-        feedback={vehicle.feedback}
-      />
+        <Dashboard
+          rpm={vehicle.rpm}
+          speed={vehicle.speed}
+          gear={vehicle.gear}
+          feedback={vehicle.feedback}
+        />
 
-      <DrivingControls
-        selectedGear={vehicle.gear}
-        clutch={input.clutch}
-        throttle={input.throttle}
-        onSelectGear={selectGear}
-        onClutchChange={clutch => updateInput({ clutch })}
-        onThrottleChange={throttle => updateInput({ throttle })}
-      />
+        <DrivingControls
+          selectedGear={vehicle.gear}
+          clutch={input.clutch}
+          throttle={input.throttle}
+          onSelectGear={selectGear}
+          onClutchChange={clutch => updateInput({ clutch })}
+          onThrottleChange={throttle => updateInput({ throttle })}
+        />
 
         <Text style={styles.guide}>
           클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히 놓아보세요
