@@ -70,6 +70,10 @@ export function requestGear(
   }
 
   const gearConfig = GEAR_CONFIG[nextGear];
+  if (Math.abs(state.speed) > gearConfig.maxSpeed) {
+    return { ...state, feedback: 'grind' };
+  }
+
   const coupledRpm = Math.max(
     ENGINE_CONFIG.idleRpm,
     Math.abs(state.speed) * gearConfig.rpmPerKph,
