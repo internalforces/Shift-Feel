@@ -67,6 +67,25 @@ describe('vehicle simulation', () => {
     expect(neutral.feedback).toBe('ready');
   });
 
+  it('rejects a downshift above the target gear speed limit', () => {
+    const cruising = {
+      ...INITIAL_VEHICLE_STATE,
+      rpm: 4200,
+      speed: 100,
+      gear: 5 as const,
+    };
+    const rejected = requestGear(cruising, 1, 1);
+    const next = stepSimulation(
+      rejected,
+      { throttle: 0, clutch: 1 },
+      0.1,
+    );
+
+    expect(rejected.gear).toBe(5);
+    expect(rejected.feedback).toBe('grind');
+    expect(next.speed).toBeGreaterThan(99);
+  });
+
   it('flags a large RPM mismatch as a jerk', () => {
     const highRevState = { ...INITIAL_VEHICLE_STATE, rpm: 6000 };
     const shifted = requestGear(highRevState, 1, 1);
