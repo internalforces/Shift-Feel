@@ -115,7 +115,7 @@ export function stepSimulation(
         ENGINE_CONFIG.neutralRpmResponse,
         delta,
       ),
-      speed: Math.max(0, state.speed - ENGINE_CONFIG.dragPerSecond * delta),
+      speed: applyDrag(state.speed, ENGINE_CONFIG.dragPerSecond * delta),
     };
   }
 
