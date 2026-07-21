@@ -59,6 +59,13 @@ export function requestGear(
     return { ...state, feedback: 'grind' };
   }
 
+  const unsafeDirectionChange =
+    (nextGear === -1 && state.speed > ENGINE_CONFIG.directionChangeMaxSpeed) ||
+    (nextGear > 0 && state.speed < -ENGINE_CONFIG.directionChangeMaxSpeed);
+  if (unsafeDirectionChange) {
+    return { ...state, feedback: 'grind' };
+  }
+
   const gearConfig = GEAR_CONFIG[nextGear];
   const coupledRpm = Math.max(
     ENGINE_CONFIG.idleRpm,

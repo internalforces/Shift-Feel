@@ -98,4 +98,24 @@ describe('vehicle simulation', () => {
 
     expect(reversing.speed).toBeLessThan(0);
   });
+
+  it('rejects reverse while the vehicle is moving forward', () => {
+    const movingForward = { ...INITIAL_VEHICLE_STATE, speed: 12 };
+    const shifted = requestGear(movingForward, -1, 1);
+
+    expect(shifted.gear).toBe(0);
+    expect(shifted.feedback).toBe('grind');
+  });
+
+  it('rejects a forward gear while the vehicle is reversing', () => {
+    const movingBackward = {
+      ...INITIAL_VEHICLE_STATE,
+      speed: -8,
+      gear: -1 as const,
+    };
+    const shifted = requestGear(movingBackward, 1, 1);
+
+    expect(shifted.gear).toBe(-1);
+    expect(shifted.feedback).toBe('grind');
+  });
 });

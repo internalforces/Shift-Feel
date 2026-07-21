@@ -11,7 +11,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Dashboard } from './app/features/dashboard/Dashboard';
 import { useVehicleSimulation } from './app/features/engine-sim/useVehicleSimulation';
 import { GearSelector } from './app/features/gearbox/GearSelector';
-import { Pedal } from './app/features/pedals/Pedal';
+import { PedalControls } from './app/features/pedals/PedalControls';
 
 function App() {
   return (
@@ -48,18 +48,12 @@ function AppContent() {
       />
 
       <View style={styles.controls}>
-        <Pedal
-          label="CLUTCH"
-          value={input.clutch}
-          accent="#8B949E"
-          onChange={clutch => updateInput({ clutch })}
-        />
         <GearSelector selectedGear={vehicle.gear} onSelect={selectGear} />
-        <Pedal
-          label="THROTTLE"
-          value={input.throttle}
-          accent="#F0883E"
-          onChange={throttle => updateInput({ throttle })}
+        <PedalControls
+          clutch={input.clutch}
+          throttle={input.throttle}
+          onClutchChange={clutch => updateInput({ clutch })}
+          onThrottleChange={throttle => updateInput({ throttle })}
         />
       </View>
 
@@ -104,10 +98,8 @@ const styles = StyleSheet.create({
   restartText: { color: '#0D1117', fontSize: 12, fontWeight: '800' },
   controls: {
     flex: 1,
-    flexDirection: 'row',
     gap: 12,
     marginTop: 16,
-    alignItems: 'stretch',
   },
   guide: {
     color: '#7D8590',

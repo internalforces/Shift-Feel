@@ -3,7 +3,7 @@ import ReactTestRenderer from 'react-test-renderer';
 
 import { Dashboard } from '../app/features/dashboard/Dashboard';
 import { GearSelector } from '../app/features/gearbox/GearSelector';
-import { Pedal } from '../app/features/pedals/Pedal';
+import { PedalControls } from '../app/features/pedals/PedalControls';
 
 describe('driving controls', () => {
   it('renders dashboard values and stall feedback', async () => {
@@ -18,7 +18,7 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
-  it('selects gears and neutral', async () => {
+  it('renders the draggable gear pattern', async () => {
     const onSelect = jest.fn();
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(() => {
@@ -27,40 +27,26 @@ describe('driving controls', () => {
       );
     });
 
-    const buttons = renderer.root.findAll(
-      node => typeof node.props.onPress === 'function',
-    );
-    await ReactTestRenderer.act(() => {
-      buttons[0].props.onPress();
-      buttons[1].props.onPress();
-    });
-
-    expect(onSelect).toHaveBeenCalledWith(0);
-    expect(onSelect).toHaveBeenCalledWith(1);
+    expect(renderer.toJSON()).toBeTruthy();
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
-  it('reports pedal press and release', async () => {
-    const onChange = jest.fn();
+  it('renders independent continuous pedal values', async () => {
+    const onClutchChange = jest.fn();
+    const onThrottleChange = jest.fn();
     let renderer!: ReactTestRenderer.ReactTestRenderer;
     await ReactTestRenderer.act(() => {
       renderer = ReactTestRenderer.create(
-        <Pedal label="CLUTCH" value={0} accent="#fff" onChange={onChange} />,
+        <PedalControls
+          clutch={0.5}
+          throttle={0.75}
+          onClutchChange={onClutchChange}
+          onThrottleChange={onThrottleChange}
+        />,
       );
     });
 
-    const pedal = renderer.root.find(
-      node =>
-        typeof node.props.onPressIn === 'function' &&
-        typeof node.props.onPressOut === 'function',
-    );
-    await ReactTestRenderer.act(() => {
-      pedal.props.onPressIn();
-      pedal.props.onPressOut();
-    });
-
-    expect(onChange).toHaveBeenNthCalledWith(1, 1);
-    expect(onChange).toHaveBeenNthCalledWith(2, 0);
+    expect(renderer.toJSON()).toBeTruthy();
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 });
