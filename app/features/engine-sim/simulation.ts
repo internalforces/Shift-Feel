@@ -72,7 +72,7 @@ export function requestGear(
   const gearConfig = GEAR_CONFIG[nextGear];
   const coupledRpm = Math.max(
     ENGINE_CONFIG.idleRpm,
-    state.speed * gearConfig.rpmPerKph,
+    Math.abs(state.speed) * gearConfig.rpmPerKph,
   );
   const feedback =
     Math.abs(state.rpm - coupledRpm) > ENGINE_CONFIG.rpmMismatchForJerk
