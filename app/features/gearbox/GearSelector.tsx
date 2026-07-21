@@ -1,30 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PanResponder,
   StyleSheet,
   Text,
   View,
-  type GestureResponderEvent,
-  type LayoutChangeEvent,
+  type LayoutRectangle,
 } from 'react-native';
 
 import type { Gear } from '../engine-sim/simulation';
 import {
-  constrainToGearPattern,
-  gearFromPosition,
-  normalizeGearPosition,
   positionForGear,
   type NormalizedPosition,
 } from './gearPattern';
 
 interface GearSelectorProps {
   selectedGear: Gear;
-  onSelect: (gear: Gear) => boolean;
-}
-
-interface PatternSize {
-  width: number;
-  height: number;
+  position: NormalizedPosition;
+  invalidRelease: boolean;
+  onPatternLayout: (layout: LayoutRectangle) => void;
 }
 
 const GEAR_LABELS: Array<{ gear: Gear; label: string }> = [
@@ -36,79 +27,14 @@ const GEAR_LABELS: Array<{ gear: Gear; label: string }> = [
   { gear: -1, label: 'R' },
 ];
 
-export function GearSelector({ selectedGear, onSelect }: GearSelectorProps) {
-  const [position, setPosition] = useState<NormalizedPosition>(
-    positionForGear(selectedGear),
-  );
-  const [invalidRelease, setInvalidRelease] = useState(false);
-  const sizeRef = useRef<PatternSize>({ width: 0, height: 0 });
-  const positionRef = useRef(position);
-  const selectedGearRef = useRef(selectedGear);
-  const onSelectRef = useRef(onSelect);
-  selectedGearRef.current = selectedGear;
-  onSelectRef.current = onSelect;
-
-  useEffect(() => {
-    const next = positionForGear(selectedGear);
-    positionRef.current = next;
-    setPosition(next);
-  }, [selectedGear]);
-
-  const moveLever = (event: GestureResponderEvent) => {
-    const next = constrainToGearPattern(
-      normalizeGearPosition(
-        event.nativeEvent.locationX,
-        event.nativeEvent.locationY,
-        sizeRef.current.width,
-        sizeRef.current.height,
-      ),
-    );
-    positionRef.current = next;
-    setPosition(next);
-    setInvalidRelease(false);
-  };
-
-  const releaseLever = () => {
-    const nextGear = gearFromPosition(positionRef.current);
-    if (nextGear === null) {
-      const resting = positionForGear(selectedGearRef.current);
-      positionRef.current = resting;
-      setPosition(resting);
-      setInvalidRelease(true);
-      return;
-    }
-
-    if (!onSelectRef.current(nextGear)) {
-      const resting = positionForGear(selectedGearRef.current);
-      positionRef.current = resting;
-      setPosition(resting);
-      setInvalidRelease(true);
-      return;
-    }
-
-    setInvalidRelease(false);
-  };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: moveLever,
-        onPanResponderMove: moveLever,
-        onPanResponderRelease: releaseLever,
-        onPanResponderTerminate: releaseLever,
-        onPanResponderTerminationRequest: () => false,
-      }),
-    [],
-  );
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    sizeRef.current = event.nativeEvent.layout;
-  };
-
+export function GearSelector({
+  selectedGear,
+  position,
+  invalidRelease,
+  onPatternLayout,
+}: GearSelectorProps) {
   return (
-    <View style={styles.container}>
+    <View pointerEvents="none" style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>H-PATTERN</Text>
         <Text style={[styles.status, invalidRelease && styles.statusInvalid]}>
@@ -117,9 +43,10 @@ export function GearSelector({ selectedGear, onSelect }: GearSelectorProps) {
       </View>
       <View
         accessibilityLabel="H-pattern gear lever"
-        onLayout={handleLayout}
+        onLayout={event => {
+          onPatternLayout(event.nativeEvent.layout);
+        }}
         style={styles.pattern}
-        {...panResponder.panHandlers}
       >
         <View style={[styles.verticalGate, styles.leftGate]} />
         <View style={[styles.verticalGate, styles.centerGate]} />
