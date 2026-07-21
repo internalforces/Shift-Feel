@@ -28,7 +28,7 @@ interface DrivingControlsProps {
   onThrottleChange: (value: number) => void;
 }
 
-interface Region extends LayoutRectangle {}
+type Region = LayoutRectangle;
 
 const contains = (region: Region, x: number, y: number) =>
   x >= region.x &&
