@@ -27,6 +27,13 @@ describe('H-pattern coordinate mapping', () => {
     expect(gearFromPosition({ x: 0.5, y: 0.63 })).toBeNull();
   });
 
+  it('rejects neutral releases outside the visible horizontal rail', () => {
+    expect(gearFromPosition({ x: 0.1, y: 0.5 })).toBeNull();
+    expect(gearFromPosition({ x: 0.9, y: 0.5 })).toBeNull();
+    expect(gearFromPosition({ x: 0.18, y: 0.5 })).toBe(0);
+    expect(gearFromPosition({ x: 0.82, y: 0.5 })).toBe(0);
+  });
+
   it('normalizes and clamps local coordinates', () => {
     expect(normalizeGearPosition(150, 100, 300, 200)).toEqual({
       x: 0.5,
