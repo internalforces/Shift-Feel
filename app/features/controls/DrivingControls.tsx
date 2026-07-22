@@ -212,15 +212,18 @@ export function DrivingControls({
 
   const handleEnd = (event: GestureResponderEvent) => {
     const activeGearTouch = gearTouchIdRef.current;
-    syncTouches(event, false);
-    if (
+    const gearTouchEnded =
       activeGearTouch !== null &&
       !event.nativeEvent.touches.some(
         touch => touch.identifier === activeGearTouch,
-      )
-    ) {
+      );
+
+    // Commit the shift while the last clutch value is still active. A single
+    // native end event can remove both fingers at once.
+    if (gearTouchEnded) {
       releaseGear();
     }
+    syncTouches(event, false);
   };
 
   const panResponder = useMemo(
@@ -246,7 +249,7 @@ export function DrivingControls({
           callbacksRef.current.onClutchChange(0);
           callbacksRef.current.onThrottleChange(0);
         },
-        onPanResponderTerminationRequest: () => false,
+        onPanResponderTerminationRequest: () => true,
       }),
     [],
   );
