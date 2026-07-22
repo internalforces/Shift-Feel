@@ -89,6 +89,37 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
+  it('commits the gear before clearing a clutch touch that ends with it', async () => {
+    const {
+      renderer,
+      responder,
+      onSelectGear,
+      onClutchChange,
+    } = await renderControls();
+    const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
+    const gearTouch = { identifier: 2, locationX: 64, locationY: 80 };
+    const callOrder: string[] = [];
+    onSelectGear.mockImplementation(() => {
+      callOrder.push('gear');
+      return true;
+    });
+    onClutchChange.mockImplementation(value => {
+      if (value === 0) {
+        callOrder.push('clutch-release');
+      }
+    });
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(touchEvent([clutchTouch, gearTouch]));
+      callOrder.length = 0;
+      responder.props.onResponderEnd(touchEvent([]));
+    });
+
+    expect(onSelectGear).toHaveBeenCalledWith(1);
+    expect(callOrder).toEqual(['gear', 'clutch-release']);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
   it('rejects a raw release between two gear gates', async () => {
     const { renderer, responder, onSelectGear } = await renderControls();
     const betweenGates = {
@@ -140,6 +171,13 @@ describe('driving controls', () => {
     });
 
     expect(onSelectGear).not.toHaveBeenCalled();
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
+  it('allows a parent scroll view to terminate the responder', async () => {
+    const { renderer, responder } = await renderControls();
+
+    expect(responder.props.onResponderTerminationRequest()).toBe(true);
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 });
