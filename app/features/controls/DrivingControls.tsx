@@ -249,7 +249,9 @@ export function DrivingControls({
           callbacksRef.current.onClutchChange(0);
           callbacksRef.current.onThrottleChange(0);
         },
-        onPanResponderTerminationRequest: () => true,
+        onPanResponderTerminationRequest: () =>
+          gearTouchIdRef.current === null &&
+          pedalTouchSidesRef.current.size === 0,
       }),
     [],
   );
