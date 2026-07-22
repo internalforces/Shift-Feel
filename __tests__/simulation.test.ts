@@ -82,8 +82,21 @@ describe('vehicle simulation', () => {
     );
 
     expect(rejected.gear).toBe(5);
-    expect(rejected.feedback).toBe('grind');
+    expect(rejected.feedback).toBe('unsafe');
     expect(next.speed).toBeGreaterThan(99);
+  });
+
+  it('rejects a shift that would exceed redline below the gear speed limit', () => {
+    const cruising = {
+      ...INITIAL_VEHICLE_STATE,
+      rpm: 3500,
+      speed: 70,
+      gear: 5 as const,
+    };
+    const rejected = requestGear(cruising, 2, 1);
+
+    expect(rejected.gear).toBe(5);
+    expect(rejected.feedback).toBe('unsafe');
   });
 
   it('flags a large RPM mismatch as a jerk', () => {
@@ -187,7 +200,7 @@ describe('vehicle simulation', () => {
     const shifted = requestGear(movingForward, -1, 1);
 
     expect(shifted.gear).toBe(0);
-    expect(shifted.feedback).toBe('grind');
+    expect(shifted.feedback).toBe('unsafe');
   });
 
   it('rejects a forward gear while the vehicle is reversing', () => {
@@ -199,6 +212,6 @@ describe('vehicle simulation', () => {
     const shifted = requestGear(movingBackward, 1, 1);
 
     expect(shifted.gear).toBe(-1);
-    expect(shifted.feedback).toBe('grind');
+    expect(shifted.feedback).toBe('unsafe');
   });
 });
