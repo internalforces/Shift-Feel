@@ -39,7 +39,8 @@ export function normalizeGearPosition(
 /** Returns the valid gear gate at a normalized position, or null outside every gate. */
 export function gearFromPosition(position: NormalizedPosition): Gear | null {
   if (Math.abs(position.y - 0.5) <= NEUTRAL_HALF_HEIGHT) {
-    return 0;
+    const [leftRail, , rightRail] = GATE_COLUMNS;
+    return position.x >= leftRail && position.x <= rightRail ? 0 : null;
   }
 
   const row = position.y < 0.5 ? 0.2 : 0.8;
