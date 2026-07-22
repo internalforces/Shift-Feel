@@ -1,7 +1,13 @@
 import { ENGINE_CONFIG, GEAR_CONFIG } from './config';
 
 export type Gear = -1 | 0 | 1 | 2 | 3 | 4 | 5;
-export type Feedback = 'ready' | 'smooth' | 'jerk' | 'grind' | 'stalled';
+export type Feedback =
+  | 'ready'
+  | 'smooth'
+  | 'jerk'
+  | 'grind'
+  | 'unsafe'
+  | 'stalled';
 
 export interface VehicleState {
   rpm: number;
@@ -66,12 +72,16 @@ export function requestGear(
     (nextGear === -1 && state.speed > ENGINE_CONFIG.directionChangeMaxSpeed) ||
     (nextGear > 0 && state.speed < -ENGINE_CONFIG.directionChangeMaxSpeed);
   if (unsafeDirectionChange) {
-    return { ...state, feedback: 'grind' };
+    return { ...state, feedback: 'unsafe' };
   }
 
   const gearConfig = GEAR_CONFIG[nextGear];
-  if (Math.abs(state.speed) > gearConfig.maxSpeed) {
-    return { ...state, feedback: 'grind' };
+  const safeShiftSpeed = Math.min(
+    gearConfig.maxSpeed,
+    ENGINE_CONFIG.redlineRpm / gearConfig.rpmPerKph,
+  );
+  if (Math.abs(state.speed) > safeShiftSpeed) {
+    return { ...state, feedback: 'unsafe' };
   }
 
   const coupledRpm = Math.max(
