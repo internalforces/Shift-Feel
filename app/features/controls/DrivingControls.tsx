@@ -221,6 +221,17 @@ export function DrivingControls({
     // Commit the shift while the last clutch value is still active. A single
     // native end event can remove both fingers at once.
     if (gearTouchEnded) {
+      const endedGearTouch = event.nativeEvent.changedTouches.find(
+        touch => touch.identifier === activeGearTouch,
+      );
+      const gearRegion = getGearRegion();
+      if (endedGearTouch && gearRegion) {
+        moveGear(
+          endedGearTouch.locationX,
+          endedGearTouch.locationY,
+          gearRegion,
+        );
+      }
       releaseGear();
     }
     syncTouches(event, false);
