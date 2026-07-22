@@ -1,3 +1,4 @@
+import { ENGINE_CONFIG, GEAR_CONFIG } from '../app/features/engine-sim/config';
 import {
   INITIAL_VEHICLE_STATE,
   requestGear,
@@ -22,6 +23,16 @@ describe('vehicle simulation', () => {
 
     expect(next.gear).toBe(0);
     expect(next.feedback).toBe('grind');
+  });
+
+  it('treats releasing the lever in the current gear as a no-op', () => {
+    const current = {
+      ...INITIAL_VEHICLE_STATE,
+      gear: 2 as const,
+      feedback: 'smooth' as const,
+    };
+
+    expect(requestGear(current, 2, 0)).toBe(current);
   });
 
   it('selects first gear with the clutch pressed and accelerates', () => {
@@ -97,6 +108,27 @@ describe('vehicle simulation', () => {
 
     expect(rejected.gear).toBe(5);
     expect(rejected.feedback).toBe('unsafe');
+  });
+
+  it('caps acceleration at the speed represented by redline RPM', () => {
+    let inSecond = {
+      ...INITIAL_VEHICLE_STATE,
+      rpm: 6500,
+      speed: 65,
+      gear: 2 as const,
+    };
+
+    for (let index = 0; index < 100; index += 1) {
+      inSecond = stepSimulation(
+        inSecond,
+        { throttle: 1, clutch: 0 },
+        0.1,
+      );
+    }
+
+    expect(inSecond.speed).toBeLessThanOrEqual(
+      ENGINE_CONFIG.redlineRpm / GEAR_CONFIG[2].rpmPerKph,
+    );
   });
 
   it('flags a large RPM mismatch as a jerk', () => {
