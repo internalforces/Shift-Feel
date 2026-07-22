@@ -4,6 +4,7 @@ import {
   requestGear,
   restartEngine,
   stepSimulation,
+  type VehicleState,
 } from '../app/features/engine-sim/simulation';
 
 describe('vehicle simulation', () => {
@@ -111,7 +112,7 @@ describe('vehicle simulation', () => {
   });
 
   it('caps acceleration at the speed represented by redline RPM', () => {
-    let inSecond = {
+    let inSecond: VehicleState = {
       ...INITIAL_VEHICLE_STATE,
       rpm: 6500,
       speed: 65,
