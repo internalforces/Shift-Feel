@@ -174,6 +174,18 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
+  it('keeps an active pedal gesture from yielding to scrolling', async () => {
+    const { renderer, responder } = await renderControls();
+    const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(touchEvent([clutchTouch]));
+    });
+
+    expect(responder.props.onResponderTerminationRequest()).toBe(false);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
   it('allows a parent scroll view to terminate the responder', async () => {
     const { renderer, responder } = await renderControls();
 
