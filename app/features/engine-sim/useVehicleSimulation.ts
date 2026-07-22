@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  startEngineAudio,
+  stopEngineAudio,
+  syncEngineAudio,
+} from '../engine-audio/EngineAudio';
+import {
   INITIAL_VEHICLE_STATE,
   requestGear,
   restartEngine,
@@ -25,6 +30,17 @@ export function useVehicleSimulation() {
       return updated;
     });
   }, []);
+
+  useEffect(() => {
+    void startEngineAudio();
+    return () => {
+      void stopEngineAudio();
+    };
+  }, []);
+
+  useEffect(() => {
+    syncEngineAudio(vehicle.rpm, vehicle.feedback);
+  }, [vehicle.rpm, vehicle.feedback]);
 
   useEffect(() => {
     const timer = setInterval(() => {
