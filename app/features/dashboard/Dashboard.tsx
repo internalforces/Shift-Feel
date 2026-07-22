@@ -14,6 +14,7 @@ const FEEDBACK_LABEL: Record<Feedback, string> = {
   smooth: '부드럽게 체결되었습니다',
   jerk: '회전수 차이로 차체가 울컥합니다',
   grind: '클러치를 더 깊게 밟으세요',
+  unsafe: '현재 속도에서는 해당 기어를 선택할 수 없습니다',
   stalled: '시동이 꺼졌습니다',
 };
 
