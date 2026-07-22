@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import { ENGINE_CONFIG } from '../engine-sim/config';
 import type { Feedback, Gear } from '../engine-sim/simulation';
 
 interface DashboardProps {
@@ -20,7 +21,7 @@ const FEEDBACK_LABEL: Record<Feedback, string> = {
 
 export function Dashboard({ rpm, speed, gear, feedback }: DashboardProps) {
   const gearLabel = gear === 0 ? 'N' : gear === -1 ? 'R' : String(gear);
-  const rpmRatio = Math.min(1, rpm / 7000);
+  const rpmRatio = Math.min(1, rpm / ENGINE_CONFIG.redlineRpm);
 
   return (
     <View style={styles.panel}>
