@@ -43,6 +43,14 @@ const approach = (
 const applyDrag = (speed: number, amount: number) =>
   Math.sign(speed) * Math.max(0, Math.abs(speed) - amount);
 
+const getGearSpeedLimit = (gear: Exclude<Gear, 0>) => {
+  const gearConfig = GEAR_CONFIG[gear];
+  return Math.min(
+    gearConfig.maxSpeed,
+    ENGINE_CONFIG.redlineRpm / gearConfig.rpmPerKph,
+  );
+};
+
 /** Returns clutch engagement where 0 is disconnected and 1 is fully connected. */
 export function getClutchEngagement(clutchPedal: number): number {
   const releasedAmount = 1 - clamp(clutchPedal, 0, 1);
@@ -60,6 +68,10 @@ export function requestGear(
   nextGear: Gear,
   clutchPedal: number,
 ): VehicleState {
+  if (nextGear === state.gear) {
+    return state;
+  }
+
   if (nextGear === 0) {
     return { ...state, gear: 0, feedback: 'ready' };
   }
@@ -76,11 +88,7 @@ export function requestGear(
   }
 
   const gearConfig = GEAR_CONFIG[nextGear];
-  const safeShiftSpeed = Math.min(
-    gearConfig.maxSpeed,
-    ENGINE_CONFIG.redlineRpm / gearConfig.rpmPerKph,
-  );
-  if (Math.abs(state.speed) > safeShiftSpeed) {
+  if (Math.abs(state.speed) > getGearSpeedLimit(nextGear)) {
     return { ...state, feedback: 'unsafe' };
   }
 
@@ -159,10 +167,11 @@ export function stepSimulation(
   const direction = state.gear === -1 ? -1 : 1;
   const acceleration = throttle * gearConfig.acceleration * engagement;
   const speedAfterDrive = state.speed + acceleration * direction * delta;
+  const speedLimit = getGearSpeedLimit(state.gear);
   const speed = clamp(
     applyDrag(speedAfterDrive, ENGINE_CONFIG.dragPerSecond * delta),
-    state.gear === -1 ? -gearConfig.maxSpeed : 0,
-    state.gear === -1 ? 0 : gearConfig.maxSpeed,
+    state.gear === -1 ? -speedLimit : 0,
+    state.gear === -1 ? 0 : speedLimit,
   );
 
   return {
