@@ -8,9 +8,16 @@ const layoutEvent = (x: number, y: number, width: number, height: number) => ({
   nativeEvent: { layout: { x, y, width, height } },
 });
 
+type TestTouch = {
+  identifier: number;
+  locationX: number;
+  locationY: number;
+};
+
 const touchEvent = (
-  touches: Array<{ identifier: number; locationX: number; locationY: number }>,
-) => ({ nativeEvent: { touches } });
+  touches: TestTouch[],
+  changedTouches: TestTouch[] = [],
+) => ({ nativeEvent: { touches, changedTouches } });
 
 async function renderControls() {
   const onSelectGear = jest.fn(() => true);
@@ -117,6 +124,20 @@ describe('driving controls', () => {
 
     expect(onSelectGear).toHaveBeenCalledWith(1);
     expect(callOrder).toEqual(['gear', 'clutch-release']);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
+  it('uses the lifted gear touch position for a quick drag', async () => {
+    const { renderer, responder, onSelectGear } = await renderControls();
+    const startInNeutral = { identifier: 2, locationX: 150, locationY: 135 };
+    const liftInFirst = { identifier: 2, locationX: 64, locationY: 80 };
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(touchEvent([startInNeutral]));
+      responder.props.onResponderEnd(touchEvent([], [liftInFirst]));
+    });
+
+    expect(onSelectGear).toHaveBeenCalledWith(1);
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
