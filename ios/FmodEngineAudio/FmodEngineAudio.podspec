@@ -6,7 +6,7 @@ Pod::Spec.new do |spec|
   spec.license = { :type => 'Proprietary', :text => 'FMOD SDK supplied separately' }
   spec.author = { 'Shift Feel' => 'internalforces' }
   spec.platform = :ios, '15.1'
-  spec.source = { :path => '.' }
+  spec.source = { :git => 'https://github.com/internalforces/Shift-Feel.git', :tag => spec.version.to_s }
   spec.source_files = '*.{h,mm}'
   spec.public_header_files = 'FmodEngineAudio.h'
   spec.header_mappings_dir = '.'
@@ -15,7 +15,7 @@ Pod::Spec.new do |spec|
     'vendor/api/studio/lib/ios/fmodstudio.xcframework'
   ]
   spec.preserve_paths = 'banks/*.bank'
-  spec.resources = 'banks/*.bank'
+  spec.resource_bundles = { 'FmodEngineAudioResources' => ['banks/*.bank'] }
   spec.frameworks = ['AVFAudio', 'AudioToolbox']
   spec.libraries = ['c++']
   spec.dependency 'React-Core'
