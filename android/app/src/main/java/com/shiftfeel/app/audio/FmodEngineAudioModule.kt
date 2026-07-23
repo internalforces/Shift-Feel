@@ -23,7 +23,7 @@ class FmodEngineAudioModule(
   @ReactMethod
   fun initialize(promise: Promise) {
     if (!nativeAvailable) {
-      promise.reject("FMOD_SDK_MISSING", "Run scripts/install-fmod.sh before building Android")
+      promise.reject("FMOD_SDK_MISSING", "Run scripts/install-fmod-android.sh before building Android")
       return
     }
 
