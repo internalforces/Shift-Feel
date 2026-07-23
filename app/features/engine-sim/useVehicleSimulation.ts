@@ -69,10 +69,13 @@ export function useVehicleSimulation() {
   }, []);
 
   const selectGear = useCallback((gear: Gear) => {
-    const next = requestGear(vehicleRef.current, gear, inputRef.current.clutch);
+    const previous = vehicleRef.current;
+    const next = requestGear(previous, gear, inputRef.current.clutch);
     vehicleRef.current = next;
     setVehicle(next);
-    triggerShiftAudioCue(next.feedback);
+    if (gear !== previous.gear) {
+      triggerShiftAudioCue(next.feedback);
+    }
     return next.gear === gear;
   }, []);
 
