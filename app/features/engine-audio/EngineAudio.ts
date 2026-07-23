@@ -113,7 +113,13 @@ export async function stopEngineAudio(): Promise<void> {
   }
 
   if (nativeModule) {
-    await nativeModule.stop();
+    try {
+      await nativeModule.stop();
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('FMOD engine audio failed to stop', error);
+      }
+    }
   }
 }
 
