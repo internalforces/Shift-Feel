@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import {
   startEngineAudio,
@@ -35,15 +36,32 @@ export function useVehicleSimulation() {
   useEffect(() => {
     let mounted = true;
 
-    void startEngineAudio().then(started => {
+    const startAndSyncAudio = async () => {
+      const started = await startEngineAudio();
       if (mounted && started) {
         const current = vehicleRef.current;
         syncEngineAudio(current.rpm, current.feedback);
       }
-    });
+    };
+
+    void startAndSyncAudio();
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      nextState => {
+        if (!mounted) {
+          return;
+        }
+        if (nextState === 'active') {
+          void startAndSyncAudio();
+        } else {
+          void stopEngineAudio();
+        }
+      },
+    );
 
     return () => {
       mounted = false;
+      appStateSubscription.remove();
       void stopEngineAudio();
     };
   }, []);
