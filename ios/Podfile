@@ -17,6 +17,13 @@ end
 target 'ShiftFeel' do
   config = use_native_modules!
 
+  fmod_framework = File.join(__dir__, 'FmodEngineAudio/vendor/api/core/lib/ios/fmod.xcframework')
+  if File.exist?(fmod_framework)
+    pod 'FmodEngineAudio', :path => './FmodEngineAudio'
+  else
+    Pod::UI.warn 'FMOD 2.03.14 not installed; run scripts/install-fmod-ios.sh to enable engine audio.'
+  end
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.

@@ -1,4 +1,5 @@
 import { ENGINE_CONFIG, GEAR_CONFIG } from './config';
+import { assessShift } from './shiftTiming';
 
 export type Gear = -1 | 0 | 1 | 2 | 3 | 4 | 5;
 export type Feedback =
@@ -76,32 +77,12 @@ export function requestGear(
     return { ...state, gear: 0, feedback: 'ready' };
   }
 
-  if (clutchPedal < ENGINE_CONFIG.clutchShiftThreshold) {
-    return { ...state, feedback: 'grind' };
+  const assessment = assessShift(state, nextGear, clutchPedal);
+  if (assessment.outcome === 'grind' || assessment.outcome === 'unsafe') {
+    return { ...state, feedback: assessment.outcome };
   }
 
-  const unsafeDirectionChange =
-    (nextGear === -1 && state.speed > ENGINE_CONFIG.directionChangeMaxSpeed) ||
-    (nextGear > 0 && state.speed < -ENGINE_CONFIG.directionChangeMaxSpeed);
-  if (unsafeDirectionChange) {
-    return { ...state, feedback: 'unsafe' };
-  }
-
-  const gearConfig = GEAR_CONFIG[nextGear];
-  if (Math.abs(state.speed) > getGearSpeedLimit(nextGear)) {
-    return { ...state, feedback: 'unsafe' };
-  }
-
-  const coupledRpm = Math.max(
-    ENGINE_CONFIG.idleRpm,
-    Math.abs(state.speed) * gearConfig.rpmPerKph,
-  );
-  const feedback =
-    Math.abs(state.rpm - coupledRpm) > ENGINE_CONFIG.rpmMismatchForJerk
-      ? 'jerk'
-      : 'smooth';
-
-  return { ...state, gear: nextGear, feedback };
+  return { ...state, gear: nextGear, feedback: assessment.outcome };
 }
 
 /** Advances the deterministic vehicle simulation by a time step in seconds. */

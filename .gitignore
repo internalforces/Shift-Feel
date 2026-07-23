@@ -73,3 +73,10 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# FMOD proprietary SDK and generated banks (installed by scripts/install-fmod-*.sh)
+android/app/src/fmod/vendor/
+android/app/src/fmod/libs/
+android/app/src/fmod/assets/
+ios/FmodEngineAudio/vendor/
+ios/FmodEngineAudio/banks/

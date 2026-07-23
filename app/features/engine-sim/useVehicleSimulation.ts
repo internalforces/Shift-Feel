@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
+import {
+  startEngineAudio,
+  stopEngineAudio,
+  syncEngineAudio,
+  triggerShiftAudioCue,
+} from '../engine-audio/EngineAudio';
 import {
   INITIAL_VEHICLE_STATE,
   requestGear,
@@ -27,6 +34,43 @@ export function useVehicleSimulation() {
   }, []);
 
   useEffect(() => {
+    let mounted = true;
+
+    const startAndSyncAudio = async () => {
+      const started = await startEngineAudio();
+      if (mounted && started) {
+        const current = vehicleRef.current;
+        syncEngineAudio(current.rpm, current.feedback);
+      }
+    };
+
+    void startAndSyncAudio();
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      nextState => {
+        if (!mounted) {
+          return;
+        }
+        if (nextState === 'active') {
+          void startAndSyncAudio();
+        } else {
+          void stopEngineAudio();
+        }
+      },
+    );
+
+    return () => {
+      mounted = false;
+      appStateSubscription.remove();
+      void stopEngineAudio();
+    };
+  }, []);
+
+  useEffect(() => {
+    syncEngineAudio(vehicle.rpm, vehicle.feedback);
+  }, [vehicle.rpm, vehicle.feedback]);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setVehicle(current => {
         const next = stepSimulation(
@@ -43,9 +87,13 @@ export function useVehicleSimulation() {
   }, []);
 
   const selectGear = useCallback((gear: Gear) => {
-    const next = requestGear(vehicleRef.current, gear, inputRef.current.clutch);
+    const previous = vehicleRef.current;
+    const next = requestGear(previous, gear, inputRef.current.clutch);
     vehicleRef.current = next;
     setVehicle(next);
+    if (gear !== previous.gear) {
+      triggerShiftAudioCue(next.feedback);
+    }
     return next.gear === gear;
   }, []);
 
