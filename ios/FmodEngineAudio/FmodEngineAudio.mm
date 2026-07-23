@@ -32,13 +32,24 @@ RCT_REMAP_METHOD(initialize,
         64, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, nullptr);
   }
 
+  NSBundle *classBundle = [NSBundle bundleForClass:[FmodEngineAudio class]];
+  NSURL *resourceBundleURL =
+      [classBundle URLForResource:@"FmodEngineAudioResources"
+                    withExtension:@"bundle"];
+  if (resourceBundleURL == nil) {
+    resourceBundleURL =
+        [[NSBundle mainBundle] URLForResource:@"FmodEngineAudioResources"
+                               withExtension:@"bundle"];
+  }
+  NSBundle *resourceBundle =
+      resourceBundleURL == nil ? nil : [NSBundle bundleWithURL:resourceBundleURL];
+
   NSArray<NSString *> *banks =
       @[@"Master", @"Master.strings", @"Vehicles"];
   for (NSString *bankName in banks) {
     if (result != FMOD_OK) {
       break;
     }
-    NSBundle *resourceBundle = [NSBundle bundleForClass:[FmodEngineAudio class]];
     NSString *path =
         [resourceBundle pathForResource:bankName ofType:@"bank"];
     if (path == nil) {
