@@ -16,7 +16,7 @@ Pod::Spec.new do |spec|
   ]
   spec.preserve_paths = 'banks/*.bank'
   spec.resource_bundles = { 'FmodEngineAudioResources' => ['banks/*.bank'] }
-  spec.frameworks = ['AVFAudio', 'AudioToolbox']
+  spec.frameworks = ['AVFoundation', 'AudioToolbox']
   spec.libraries = ['c++']
   spec.dependency 'React-Core'
   spec.pod_target_xcconfig = {
