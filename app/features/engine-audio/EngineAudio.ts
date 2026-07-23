@@ -16,7 +16,7 @@ const nativeModule = NativeModules.FmodEngineAudio as
   | FmodEngineAudioModule
   | undefined;
 
-const ENGINE_EVENT_PATH = 'event:/vehicle/default/engine';
+const ENGINE_EVENT_PATH = 'event:/Vehicles/Car Engine';
 
 let initialized = false;
 let lastFeedback: Feedback | null = null;
