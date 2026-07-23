@@ -19,9 +19,13 @@ const nativeModule = NativeModules.FmodEngineAudio as
 const ENGINE_EVENT_PATH = 'event:/Vehicles/Car Engine';
 
 let initialized = false;
+let lifecycleVersion = 0;
+let startPromise: Promise<boolean> | null = null;
+let pendingRpm = 0;
+let pendingFeedback: Feedback | null = null;
 let lastFeedback: Feedback | null = null;
 
-/** Starts the default FMOD engine event. Safe to call repeatedly. */
+/** Starts the default FMOD engine event. Concurrent callers share one startup. */
 export async function startEngineAudio(): Promise<boolean> {
   if (!nativeModule) {
     if (__DEV__) {
@@ -30,43 +34,97 @@ export async function startEngineAudio(): Promise<boolean> {
     return false;
   }
 
-  if (!initialized) {
+  if (initialized) {
+    return true;
+  }
+  if (startPromise) {
+    return startPromise;
+  }
+
+  const requestedVersion = lifecycleVersion;
+  const pendingStart = (async () => {
     try {
       await nativeModule.initialize();
       await nativeModule.startEngineEvent(ENGINE_EVENT_PATH);
+
+      if (requestedVersion !== lifecycleVersion) {
+        await nativeModule.stop();
+        return false;
+      }
+
       initialized = true;
+      flushPendingState();
+      return true;
     } catch (error) {
+      initialized = false;
       if (__DEV__) {
         console.warn('FMOD engine audio failed to start', error);
       }
       return false;
+    } finally {
+      if (startPromise === pendingStart) {
+        startPromise = null;
+      }
     }
-  }
-  return true;
+  })();
+
+  startPromise = pendingStart;
+  return pendingStart;
 }
 
-/** Sends the latest simulation RPM to FMOD's continuous RPM parameter. */
+/** Stores and sends the latest continuous simulation state. */
 export function syncEngineAudio(rpm: number, feedback: Feedback): void {
+  pendingRpm = Math.max(0, rpm);
+  pendingFeedback = feedback;
+
   if (!nativeModule || !initialized) {
     return;
   }
 
-  nativeModule.setRpm(Math.max(0, rpm));
-  if (feedback !== lastFeedback && isAudioCue(feedback)) {
-    nativeModule.triggerCue(feedback);
+  nativeModule.setRpm(pendingRpm);
+  if (feedback === 'stalled' && lastFeedback !== 'stalled') {
+    nativeModule.triggerCue('stalled');
   }
   lastFeedback = feedback;
 }
 
-/** Stops audio and resets facade state for an app/session restart. */
-export async function stopEngineAudio(): Promise<void> {
-  if (nativeModule && initialized) {
-    await nativeModule.stop();
+/** Emits every discrete shift attempt, including repeated equal outcomes. */
+export function triggerShiftAudioCue(feedback: Feedback): void {
+  if (
+    nativeModule &&
+    initialized &&
+    (feedback === 'grind' || feedback === 'jerk')
+  ) {
+    nativeModule.triggerCue(feedback);
   }
-  initialized = false;
-  lastFeedback = null;
 }
 
-function isAudioCue(feedback: Feedback): feedback is EngineAudioCue {
-  return feedback === 'grind' || feedback === 'jerk' || feedback === 'stalled';
+/** Cancels in-flight startup, stops native audio, and resets facade state. */
+export async function stopEngineAudio(): Promise<void> {
+  lifecycleVersion += 1;
+  initialized = false;
+  lastFeedback = null;
+  pendingFeedback = null;
+  pendingRpm = 0;
+
+  const pendingStart = startPromise;
+  if (pendingStart) {
+    await pendingStart;
+  }
+
+  if (nativeModule) {
+    await nativeModule.stop();
+  }
+}
+
+function flushPendingState(): void {
+  if (!nativeModule || !initialized) {
+    return;
+  }
+
+  nativeModule.setRpm(pendingRpm);
+  if (pendingFeedback === 'stalled') {
+    nativeModule.triggerCue('stalled');
+  }
+  lastFeedback = pendingFeedback;
 }
