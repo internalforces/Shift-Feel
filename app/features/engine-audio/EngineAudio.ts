@@ -21,6 +21,8 @@ const ENGINE_EVENT_PATH = 'event:/Vehicles/Car Engine';
 let initialized = false;
 let lifecycleVersion = 0;
 let startPromise: Promise<boolean> | null = null;
+let startVersion: number | null = null;
+let stopPromise: Promise<void> | null = null;
 let pendingRpm = 0;
 let pendingFeedback: Feedback | null = null;
 let lastFeedback: Feedback | null = null;
@@ -34,11 +36,23 @@ export async function startEngineAudio(): Promise<boolean> {
     return false;
   }
 
+  if (stopPromise) {
+    await stopPromise;
+  }
   if (initialized) {
     return true;
   }
   if (startPromise) {
-    return startPromise;
+    const existingStart = startPromise;
+    const existingVersion = startVersion;
+    const result = await existingStart;
+    if (existingVersion === lifecycleVersion) {
+      return result;
+    }
+    if (stopPromise) {
+      await stopPromise;
+    }
+    return startEngineAudio();
   }
 
   const requestedVersion = lifecycleVersion;
@@ -64,11 +78,13 @@ export async function startEngineAudio(): Promise<boolean> {
     } finally {
       if (startPromise === pendingStart) {
         startPromise = null;
+        startVersion = null;
       }
     }
   })();
 
   startPromise = pendingStart;
+  startVersion = requestedVersion;
   return pendingStart;
 }
 
@@ -107,18 +123,33 @@ export async function stopEngineAudio(): Promise<void> {
   pendingFeedback = null;
   pendingRpm = 0;
 
-  const pendingStart = startPromise;
-  if (pendingStart) {
-    await pendingStart;
+  if (stopPromise) {
+    return stopPromise;
   }
 
-  if (nativeModule) {
-    try {
-      await nativeModule.stop();
-    } catch (error) {
-      if (__DEV__) {
-        console.warn('FMOD engine audio failed to stop', error);
+  const pendingStart = startPromise;
+  const pendingStop = (async () => {
+    if (pendingStart) {
+      await pendingStart;
+    }
+
+    if (nativeModule) {
+      try {
+        await nativeModule.stop();
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('FMOD engine audio failed to stop', error);
+        }
       }
+    }
+  })();
+
+  stopPromise = pendingStop;
+  try {
+    await pendingStop;
+  } finally {
+    if (stopPromise === pendingStop) {
+      stopPromise = null;
     }
   }
 }
