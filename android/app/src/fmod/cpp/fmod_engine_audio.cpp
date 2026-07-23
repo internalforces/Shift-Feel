@@ -58,6 +58,10 @@ Java_com_shiftfeel_app_audio_FmodEngineAudioModule_nativeInitialize(
     result = static_cast<FMOD_RESULT>(
         loadBank((std::string(prefix) + "Vehicles.bank").c_str()));
   }
+  if (result != FMOD_OK) {
+    studioSystem->release();
+    studioSystem = nullptr;
+  }
   return result;
 }
 
