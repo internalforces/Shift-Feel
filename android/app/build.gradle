@@ -91,7 +91,6 @@ android {
         sourceSets {
             main {
                 assets.srcDirs += ["src/fmod/assets"]
-                jniLibs.srcDirs += ["src/fmod/jniLibs"]
             }
         }
         externalNativeBuild {
