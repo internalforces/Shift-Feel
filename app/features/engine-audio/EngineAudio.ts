@@ -31,9 +31,16 @@ export async function startEngineAudio(): Promise<boolean> {
   }
 
   if (!initialized) {
-    await nativeModule.initialize();
-    await nativeModule.startEngineEvent(ENGINE_EVENT_PATH);
-    initialized = true;
+    try {
+      await nativeModule.initialize();
+      await nativeModule.startEngineEvent(ENGINE_EVENT_PATH);
+      initialized = true;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn('FMOD engine audio failed to start', error);
+      }
+      return false;
+    }
   }
   return true;
 }
