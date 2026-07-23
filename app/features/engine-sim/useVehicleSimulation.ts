@@ -4,6 +4,7 @@ import {
   startEngineAudio,
   stopEngineAudio,
   syncEngineAudio,
+  triggerShiftAudioCue,
 } from '../engine-audio/EngineAudio';
 import {
   INITIAL_VEHICLE_STATE,
@@ -32,8 +33,17 @@ export function useVehicleSimulation() {
   }, []);
 
   useEffect(() => {
-    void startEngineAudio();
+    let mounted = true;
+
+    void startEngineAudio().then(started => {
+      if (mounted && started) {
+        const current = vehicleRef.current;
+        syncEngineAudio(current.rpm, current.feedback);
+      }
+    });
+
     return () => {
+      mounted = false;
       void stopEngineAudio();
     };
   }, []);
@@ -62,6 +72,7 @@ export function useVehicleSimulation() {
     const next = requestGear(vehicleRef.current, gear, inputRef.current.clutch);
     vehicleRef.current = next;
     setVehicle(next);
+    triggerShiftAudioCue(next.feedback);
     return next.gear === gear;
   }, []);
 
