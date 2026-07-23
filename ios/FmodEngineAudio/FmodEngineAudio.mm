@@ -38,8 +38,9 @@ RCT_REMAP_METHOD(initialize,
     if (result != FMOD_OK) {
       break;
     }
+    NSBundle *resourceBundle = [NSBundle bundleForClass:[FmodEngineAudio class]];
     NSString *path =
-        [[NSBundle mainBundle] pathForResource:bankName ofType:@"bank"];
+        [resourceBundle pathForResource:bankName ofType:@"bank"];
     if (path == nil) {
       result = FMOD_ERR_FILE_NOTFOUND;
       break;
