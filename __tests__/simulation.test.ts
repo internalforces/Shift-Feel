@@ -71,6 +71,22 @@ describe('vehicle simulation', () => {
     expect(restarted.feedback).toBe('ready');
   });
 
+  it('requires neutral before restarting a stalled engine', () => {
+    const stalledInFirst = {
+      ...INITIAL_VEHICLE_STATE,
+      gear: 1 as const,
+      rpm: 0,
+      engineRunning: false,
+      feedback: 'stalled' as const,
+    };
+
+    expect(restartEngine(stalledInFirst)).toEqual(stalledInFirst);
+    expect(requestGear(stalledInFirst, 0, 0)).toMatchObject({
+      gear: 0,
+      feedback: 'stalled',
+    });
+  });
+
   it('always allows returning to neutral', () => {
     const inFirst = requestGear(INITIAL_VEHICLE_STATE, 1, 1);
     const neutral = requestGear(inFirst, 0, 0);

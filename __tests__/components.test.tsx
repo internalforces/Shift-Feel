@@ -96,6 +96,11 @@ describe('driving controls', () => {
     });
 
     expect(renderer.toJSON()).toBeTruthy();
+    expect(
+      renderer.root.findAll(
+        node => node.props.children === '시동이 꺼졌습니다 — N단으로 변속하세요',
+      ),
+    ).not.toHaveLength(0);
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
@@ -142,6 +147,30 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
+  it('keeps throttle active when the clutch finger is released first', async () => {
+    const { renderer, responder, onClutchChange, onThrottleChange } =
+      await renderControls();
+    const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
+    const throttleTouch = { identifier: 2, locationX: 250, locationY: 270 };
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(
+        touchEvent([clutchTouch, throttleTouch]),
+      );
+      responder.props.onResponderEnd(
+        touchEvent([throttleTouch], [clutchTouch]),
+      );
+      responder.props.onResponderRelease(
+        touchEvent([throttleTouch], [clutchTouch]),
+      );
+    });
+
+    expect(onClutchChange).toHaveBeenLastCalledWith(0);
+    expect(onThrottleChange).toHaveBeenLastCalledWith(expect.any(Number));
+    expect(onThrottleChange).not.toHaveBeenLastCalledWith(0);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
   it('uses the lifted gear touch position for a quick drag', async () => {
     const { renderer, responder, onSelectGear } = await renderControls();
     const startInNeutral = { identifier: 2, locationX: 150, locationY: 135 };
@@ -156,16 +185,16 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
-  it('rejects a raw release between two gear gates', async () => {
+  it('rejects a raw release outside the forgiving gear target', async () => {
     const { renderer, responder, onSelectGear } = await renderControls();
-    const betweenGates = {
+    const outsideGate = {
       identifier: 2,
-      locationX: 16 + 268 * 0.34,
+      locationX: 16 + 268 * 0.99,
       locationY: 40 + 190 * 0.2,
     };
 
     await ReactTestRenderer.act(() => {
-      responder.props.onResponderGrant(touchEvent([betweenGates]));
+      responder.props.onResponderGrant(touchEvent([outsideGate]));
       responder.props.onResponderEnd(touchEvent([]));
     });
 

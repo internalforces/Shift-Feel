@@ -74,7 +74,11 @@ export function requestGear(
   }
 
   if (nextGear === 0) {
-    return { ...state, gear: 0, feedback: 'ready' };
+    return {
+      ...state,
+      gear: 0,
+      feedback: state.engineRunning ? 'ready' : 'stalled',
+    };
   }
 
   const assessment = assessShift(state, nextGear, clutchPedal);
@@ -162,8 +166,12 @@ export function stepSimulation(
   };
 }
 
-/** Restarts the engine while preserving the selected gear and vehicle speed. */
+/** Restarts only from neutral so the player must make a safe recovery after a stall. */
 export function restartEngine(state: VehicleState): VehicleState {
+  if (state.gear !== 0) {
+    return state;
+  }
+
   return {
     ...state,
     rpm: ENGINE_CONFIG.idleRpm,

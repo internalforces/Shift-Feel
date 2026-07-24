@@ -247,7 +247,12 @@ export function DrivingControls({
       onPanResponderStart: event => syncTouches(event, true),
       onPanResponderMove: event => syncTouches(event, false),
       onPanResponderEnd: handleEnd,
-      onPanResponderRelease: () => {
+      onPanResponderRelease: event => {
+        // React Native can emit a release while another finger is still held.
+        // Keep that pedal active until the final touch leaves the control area.
+        if (event.nativeEvent.touches.length > 0) {
+          return;
+        }
         if (gearTouchIdRef.current !== null) {
           releaseGear();
         }

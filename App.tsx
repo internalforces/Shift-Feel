@@ -33,6 +33,7 @@ function AppContent() {
     useVehicleSimulation();
   const { width, height } = useWindowDimensions();
   const compact = width > height;
+  const canRestart = vehicle.gear === 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -45,8 +46,15 @@ function AppContent() {
             </Text>
           </View>
           {!vehicle.engineRunning && (
-            <Pressable style={styles.restartButton} onPress={startEngine}>
-              <Text style={styles.restartText}>시동 걸기</Text>
+            <Pressable
+              accessibilityLabel={canRestart ? '시동 걸기' : 'N단으로 변속'}
+              disabled={!canRestart}
+              style={[styles.restartButton, !canRestart && styles.restartDisabled]}
+              onPress={startEngine}
+            >
+              <Text style={styles.restartText}>
+                {canRestart ? '시동 걸기' : 'N단으로 변속'}
+              </Text>
             </Pressable>
           )}
         </View>
@@ -116,6 +124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
+  restartDisabled: { backgroundColor: '#30363D' },
   restartText: { color: '#0D1117', fontSize: 12, fontWeight: '800' },
   guide: {
     color: '#7D8590',

@@ -23,8 +23,13 @@ describe('H-pattern coordinate mapping', () => {
   });
 
   it('rejects release positions outside a gate', () => {
-    expect(gearFromPosition({ x: 0.34, y: 0.2 })).toBeNull();
-    expect(gearFromPosition({ x: 0.5, y: 0.63 })).toBeNull();
+    expect(gearFromPosition({ x: 0.99, y: 0.2 })).toBeNull();
+    expect(gearFromPosition({ x: 0.5, y: 0.99 })).toBeNull();
+  });
+
+  it('accepts a release near the boundary of the nearest gear gate', () => {
+    expect(gearFromPosition({ x: 0.34, y: 0.2 })).toBe(3);
+    expect(gearFromPosition({ x: 0.5, y: 0.36 })).toBe(0);
   });
 
   it('rejects neutral releases outside the visible horizontal rail', () => {
@@ -48,9 +53,9 @@ describe('H-pattern coordinate mapping', () => {
       x: 0.4,
       y: 0.5,
     });
-    expect(constrainToGearPattern({ x: 0.74, y: 0.35 })).toEqual({
+    expect(constrainToGearPattern({ x: 0.74, y: 0.32 })).toEqual({
       x: 0.82,
-      y: 0.35,
+      y: 0.32,
     });
     expect(constrainToGearPattern({ x: 0, y: 1 })).toEqual({ x: 0.18, y: 0.8 });
   });

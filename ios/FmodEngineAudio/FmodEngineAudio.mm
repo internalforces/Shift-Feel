@@ -10,6 +10,7 @@
 @interface FmodEngineAudio ()
 - (void)registerAudioSessionObservers;
 - (void)unregisterAudioSessionObservers;
+- (void)deactivateAudioSession;
 - (void)suspendMixer;
 - (void)resumeMixer;
 @end
@@ -120,6 +121,14 @@ RCT_EXPORT_MODULE(FmodEngineAudio)
   _needsMixerReset = NO;
 }
 
+- (void)deactivateAudioSession {
+  NSError *error = nil;
+  [[AVAudioSession sharedInstance]
+      setActive:NO
+      withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
+      error:&error];
+}
+
 - (void)suspendMixer {
   std::lock_guard<std::mutex> lock(_audioMutex);
   if (_studioSystem == nullptr || _mixerSuspended) {
@@ -204,6 +213,7 @@ RCT_REMAP_METHOD(initialize,
       _studioSystem->release();
       _studioSystem = nullptr;
     }
+    [self deactivateAudioSession];
     reject(@"FMOD_INIT_FAILED",
            [NSString stringWithFormat:@"FMOD result %d", result], nil);
     return;
@@ -278,6 +288,7 @@ RCT_REMAP_METHOD(stop,
     _studioSystem = nullptr;
   }
   [self unregisterAudioSessionObservers];
+  [self deactivateAudioSession];
   resolve(nil);
 }
 
