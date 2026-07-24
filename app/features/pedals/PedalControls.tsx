@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 interface PedalControlsProps {
   clutch: number;
   throttle: number;
+  compact?: boolean;
 }
 
 interface PedalMeterProps {
@@ -10,11 +11,18 @@ interface PedalMeterProps {
   value: number;
   accent: string;
   showBiteZone?: boolean;
+  compact?: boolean;
 }
 
-function PedalMeter({ label, value, accent, showBiteZone }: PedalMeterProps) {
+function PedalMeter({
+  label,
+  value,
+  accent,
+  showBiteZone,
+  compact = false,
+}: PedalMeterProps) {
   return (
-    <View style={styles.pedal}>
+    <View style={[styles.pedal, compact && styles.compactPedal]}>
       <View style={styles.pedalHeader}>
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.value}>{Math.round(value * 100)}%</Text>
@@ -32,7 +40,7 @@ function PedalMeter({ label, value, accent, showBiteZone }: PedalMeterProps) {
           ]}
         />
       </View>
-      <Text style={styles.hint}>위로 밀어 입력</Text>
+      {!compact && <Text style={styles.hint}>위로 밀어 입력</Text>}
     </View>
   );
 }
@@ -40,32 +48,41 @@ function PedalMeter({ label, value, accent, showBiteZone }: PedalMeterProps) {
 export function PedalControls({
   clutch,
   throttle,
+  compact = false,
 }: PedalControlsProps) {
   return (
     <View
       accessibilityLabel="dual pedal controls"
       pointerEvents="none"
-      style={styles.container}
+      style={[styles.container, compact && styles.compactContainer]}
     >
       <PedalMeter
         label="CLUTCH"
         value={clutch}
         accent="#8B949E"
         showBiteZone
+        compact={compact}
       />
-      <PedalMeter label="THROTTLE" value={throttle} accent="#F0883E" />
+      <PedalMeter
+        label="THROTTLE"
+        value={throttle}
+        accent="#F0883E"
+        compact={compact}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flexDirection: 'row', gap: 12, minHeight: 150 },
+  compactContainer: { flex: 1, gap: 8, minHeight: 0 },
   pedal: {
     flex: 1,
     backgroundColor: '#161B22',
     borderRadius: 20,
     padding: 14,
   },
+  compactPedal: { borderRadius: 16, padding: 10 },
   pedalHeader: {
     flexDirection: 'row',
     alignItems: 'center',

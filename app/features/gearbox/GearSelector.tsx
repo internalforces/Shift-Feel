@@ -1,21 +1,14 @@
-import {
-  StyleSheet,
-  Text,
-  View,
-  type LayoutRectangle,
-} from 'react-native';
+import { StyleSheet, Text, View, type LayoutRectangle } from 'react-native';
 
 import type { Gear } from '../engine-sim/simulation';
-import {
-  positionForGear,
-  type NormalizedPosition,
-} from './gearPattern';
+import { positionForGear, type NormalizedPosition } from './gearPattern';
 
 interface GearSelectorProps {
   selectedGear: Gear;
   position: NormalizedPosition;
   invalidRelease: boolean;
   onPatternLayout: (layout: LayoutRectangle) => void;
+  compact?: boolean;
 }
 
 const GEAR_LABELS: Array<{ gear: Gear; label: string }> = [
@@ -32,9 +25,13 @@ export function GearSelector({
   position,
   invalidRelease,
   onPatternLayout,
+  compact = false,
 }: GearSelectorProps) {
   return (
-    <View pointerEvents="none" style={styles.container}>
+    <View
+      pointerEvents="none"
+      style={[styles.container, compact && styles.compactContainer]}
+    >
       <View style={styles.header}>
         <Text style={styles.title}>H-PATTERN</Text>
         <Text style={[styles.status, invalidRelease && styles.statusInvalid]}>
@@ -46,7 +43,7 @@ export function GearSelector({
         onLayout={event => {
           onPatternLayout(event.nativeEvent.layout);
         }}
-        style={styles.pattern}
+        style={[styles.pattern, compact && styles.compactPattern]}
       >
         <View style={[styles.verticalGate, styles.leftGate]} />
         <View style={[styles.verticalGate, styles.centerGate]} />
@@ -95,6 +92,7 @@ export function GearSelector({
 
 const styles = StyleSheet.create({
   container: { backgroundColor: '#161B22', borderRadius: 20, padding: 16 },
+  compactContainer: { borderRadius: 16, padding: 12 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -110,6 +108,7 @@ const styles = StyleSheet.create({
   status: { color: '#6E7681', fontSize: 10 },
   statusInvalid: { color: '#FF7B72' },
   pattern: { height: 190, position: 'relative' },
+  compactPattern: { height: 148 },
   verticalGate: {
     position: 'absolute',
     top: '20%',

@@ -14,10 +14,33 @@ type TestTouch = {
   locationY: number;
 };
 
-const touchEvent = (
-  touches: TestTouch[],
-  changedTouches: TestTouch[] = [],
-) => ({ nativeEvent: { touches, changedTouches } });
+const touchEvent = (touches: TestTouch[], changedTouches: TestTouch[] = []) => {
+  const touchBank = touches.reduce<Array<Record<string, unknown> | null>>(
+    (bank, touch) => {
+      bank[touch.identifier] = {
+        touchActive: true,
+        currentPageX: touch.locationX,
+        currentPageY: touch.locationY,
+        previousPageX: touch.locationX,
+        previousPageY: touch.locationY,
+        currentTimeStamp: 1,
+      };
+      return bank;
+    },
+    [],
+  );
+
+  return {
+    nativeEvent: { touches, changedTouches },
+    touchHistory: {
+      touchBank,
+      numberActiveTouches: touches.length,
+      indexOfSingleActiveTouch:
+        touches.length === 1 ? touches[0].identifier : -1,
+      mostRecentTimeStamp: 1,
+    },
+  };
+};
 
 async function renderControls() {
   const onSelectGear = jest.fn(() => true);
@@ -38,13 +61,17 @@ async function renderControls() {
     );
   });
 
-  const layoutNodes = renderer.root.findAll(
-    node => typeof node.props.onLayout === 'function',
-  );
+  const gearRegion = renderer.root.findByProps({ testID: 'gear-input-region' });
+  const gearPattern = renderer.root.findByProps({
+    accessibilityLabel: 'H-pattern gear lever',
+  });
+  const pedalRegion = renderer.root.findByProps({
+    testID: 'pedal-input-region',
+  });
   await ReactTestRenderer.act(() => {
-    layoutNodes[0].props.onLayout(layoutEvent(0, 0, 300, 230));
-    layoutNodes[1].props.onLayout(layoutEvent(16, 40, 268, 190));
-    layoutNodes[2].props.onLayout(layoutEvent(0, 242, 300, 150));
+    gearRegion.props.onLayout(layoutEvent(0, 0, 300, 230));
+    gearPattern.props.onLayout(layoutEvent(16, 40, 268, 190));
+    pedalRegion.props.onLayout(layoutEvent(0, 242, 300, 150));
   });
 
   const responder = renderer.root.find(
@@ -73,36 +100,24 @@ describe('driving controls', () => {
   });
 
   it('shifts while a separate touch keeps the clutch pressed', async () => {
-    const {
-      renderer,
-      responder,
-      onSelectGear,
-      onClutchChange,
-    } = await renderControls();
+    const { renderer, responder, onSelectGear, onClutchChange } =
+      await renderControls();
     const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
     const gearTouch = { identifier: 2, locationX: 64, locationY: 80 };
 
     await ReactTestRenderer.act(() => {
-      responder.props.onResponderGrant(
-        touchEvent([clutchTouch, gearTouch]),
-      );
+      responder.props.onResponderGrant(touchEvent([clutchTouch, gearTouch]));
       responder.props.onResponderEnd(touchEvent([clutchTouch]));
     });
 
-    expect(onClutchChange).toHaveBeenCalledWith(
-      expect.any(Number),
-    );
+    expect(onClutchChange).toHaveBeenCalledWith(expect.any(Number));
     expect(onSelectGear).toHaveBeenCalledWith(1);
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
   it('commits the gear before clearing a clutch touch that ends with it', async () => {
-    const {
-      renderer,
-      responder,
-      onSelectGear,
-      onClutchChange,
-    } = await renderControls();
+    const { renderer, responder, onSelectGear, onClutchChange } =
+      await renderControls();
     const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
     const gearTouch = { identifier: 2, locationX: 64, locationY: 80 };
     const callOrder: string[] = [];
@@ -159,12 +174,8 @@ describe('driving controls', () => {
   });
 
   it('keeps a pedal pressed above its edge without claiming a gear', async () => {
-    const {
-      renderer,
-      responder,
-      onSelectGear,
-      onClutchChange,
-    } = await renderControls();
+    const { renderer, responder, onSelectGear, onClutchChange } =
+      await renderControls();
     const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
     const abovePedal = { identifier: 1, locationX: 64, locationY: 20 };
 

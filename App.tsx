@@ -7,10 +7,10 @@
 
 import {
   Pressable,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -31,17 +31,18 @@ function App() {
 function AppContent() {
   const { vehicle, input, updateInput, selectGear, startEngine } =
     useVehicleSimulation();
+  const { width, height } = useWindowDimensions();
+  const compact = width > height;
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator
-      >
+      <View style={[styles.container, compact && styles.compactContainer]}>
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>MANUAL DRIVE LAB</Text>
-            <Text style={styles.title}>SHIFT FEEL</Text>
+            <Text style={[styles.title, compact && styles.compactTitle]}>
+              SHIFT FEEL
+            </Text>
           </View>
           {!vehicle.engineRunning && (
             <Pressable style={styles.restartButton} onPress={startEngine}>
@@ -55,6 +56,7 @@ function AppContent() {
           speed={vehicle.speed}
           gear={vehicle.gear}
           feedback={vehicle.feedback}
+          compact={compact}
         />
 
         <DrivingControls
@@ -64,12 +66,16 @@ function AppContent() {
           onSelectGear={selectGear}
           onClutchChange={clutch => updateInput({ clutch })}
           onThrottleChange={throttle => updateInput({ throttle })}
+          compact={compact}
         />
 
-        <Text style={styles.guide}>
-          클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히 놓아보세요
-        </Text>
-      </ScrollView>
+        {!compact && (
+          <Text style={styles.guide}>
+            클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히
+            놓아보세요
+          </Text>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -80,10 +86,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#0D1117',
   },
   container: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
+  compactContainer: { paddingHorizontal: 14, paddingVertical: 6 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -102,6 +109,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.5,
   },
+  compactTitle: { fontSize: 21 },
   restartButton: {
     backgroundColor: '#F0883E',
     borderRadius: 12,

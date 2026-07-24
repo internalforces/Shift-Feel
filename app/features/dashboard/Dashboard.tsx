@@ -8,6 +8,7 @@ interface DashboardProps {
   speed: number;
   gear: Gear;
   feedback: Feedback;
+  compact?: boolean;
 }
 
 const FEEDBACK_LABEL: Record<Feedback, string> = {
@@ -19,30 +20,49 @@ const FEEDBACK_LABEL: Record<Feedback, string> = {
   stalled: '시동이 꺼졌습니다',
 };
 
-export function Dashboard({ rpm, speed, gear, feedback }: DashboardProps) {
+export function Dashboard({
+  rpm,
+  speed,
+  gear,
+  feedback,
+  compact = false,
+}: DashboardProps) {
   const gearLabel = gear === 0 ? 'N' : gear === -1 ? 'R' : String(gear);
   const rpmRatio = Math.min(1, rpm / ENGINE_CONFIG.redlineRpm);
 
   return (
-    <View style={styles.panel}>
+    <View style={[styles.panel, compact && styles.compactPanel]}>
       <View style={styles.metrics}>
         <View>
           <Text style={styles.label}>RPM</Text>
-          <Text style={styles.metric}>{Math.round(rpm).toLocaleString()}</Text>
+          <Text style={[styles.metric, compact && styles.compactMetric]}>
+            {Math.round(rpm).toLocaleString()}
+          </Text>
         </View>
         <View style={styles.gearBox}>
           <Text style={styles.label}>GEAR</Text>
-          <Text style={styles.gear}>{gearLabel}</Text>
+          <Text style={[styles.gear, compact && styles.compactGear]}>
+            {gearLabel}
+          </Text>
         </View>
         <View style={styles.rightMetric}>
           <Text style={styles.label}>KM/H</Text>
-          <Text style={styles.metric}>{Math.round(Math.abs(speed))}</Text>
+          <Text style={[styles.metric, compact && styles.compactMetric]}>
+            {Math.round(Math.abs(speed))}
+          </Text>
         </View>
       </View>
       <View style={styles.rpmTrack}>
         <View style={[styles.rpmFill, { width: `${rpmRatio * 100}%` }]} />
       </View>
-      <Text style={[styles.feedback, feedback === 'stalled' && styles.alert]}>
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.feedback,
+          compact && styles.compactFeedback,
+          feedback === 'stalled' && styles.alert,
+        ]}
+      >
         {FEEDBACK_LABEL[feedback]}
       </Text>
     </View>
@@ -51,6 +71,11 @@ export function Dashboard({ rpm, speed, gear, feedback }: DashboardProps) {
 
 const styles = StyleSheet.create({
   panel: { backgroundColor: '#161B22', borderRadius: 24, padding: 20 },
+  compactPanel: {
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   metrics: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -63,8 +88,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   metric: { color: '#F0F6FC', fontSize: 28, fontWeight: '700', marginTop: 4 },
+  compactMetric: { fontSize: 22, marginTop: 1 },
   gearBox: { alignItems: 'center' },
   gear: { color: '#58D6C7', fontSize: 52, fontWeight: '800', lineHeight: 58 },
+  compactGear: { fontSize: 38, lineHeight: 42 },
   rightMetric: { alignItems: 'flex-end' },
   rpmTrack: {
     height: 8,
@@ -80,5 +107,6 @@ const styles = StyleSheet.create({
     marginTop: 14,
     textAlign: 'center',
   },
+  compactFeedback: { fontSize: 11, marginTop: 8 },
   alert: { color: '#FF7B72' },
 });

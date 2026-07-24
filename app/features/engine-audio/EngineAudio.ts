@@ -56,7 +56,8 @@ export async function startEngineAudio(): Promise<boolean> {
   }
 
   const requestedVersion = lifecycleVersion;
-  const pendingStart: Promise<boolean> = (async () => {
+  let pendingStart!: Promise<boolean>;
+  pendingStart = (async () => {
     try {
       await nativeModule.initialize();
       await nativeModule.startEngineEvent(ENGINE_EVENT_PATH);

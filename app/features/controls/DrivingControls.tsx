@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   PanResponder,
   StyleSheet,
@@ -26,6 +26,7 @@ interface DrivingControlsProps {
   onSelectGear: (gear: Gear) => boolean;
   onClutchChange: (value: number) => void;
   onThrottleChange: (value: number) => void;
+  compact?: boolean;
 }
 
 type Region = LayoutRectangle;
@@ -44,6 +45,7 @@ export function DrivingControls({
   onSelectGear,
   onClutchChange,
   onThrottleChange,
+  compact = false,
 }: DrivingControlsProps) {
   const [position, setPosition] = useState<NormalizedPosition>(
     positionForGear(selectedGear),
@@ -52,8 +54,8 @@ export function DrivingControls({
   const gearContainerRef = useRef<Region | null>(null);
   const gearPatternRef = useRef<Region | null>(null);
   const pedalRegionRef = useRef<Region | null>(null);
-  const gearTouchIdRef = useRef<number | null>(null);
-  const pedalTouchSidesRef = useRef(new Map<number, PedalSide>());
+  const gearTouchIdRef = useRef<string | null>(null);
+  const pedalTouchSidesRef = useRef(new Map<string, PedalSide>());
   const positionRef = useRef(position);
   const rawPositionRef = useRef(position);
   const selectedGearRef = useRef(selectedGear);
@@ -115,10 +117,7 @@ export function DrivingControls({
   const releaseGear = () => {
     gearTouchIdRef.current = null;
     const nextGear = gearFromPosition(rawPositionRef.current);
-    if (
-      nextGear === null ||
-      !callbacksRef.current.onSelectGear(nextGear)
-    ) {
+    if (nextGear === null || !callbacksRef.current.onSelectGear(nextGear)) {
       resetGear(true);
       return;
     }
@@ -237,40 +236,46 @@ export function DrivingControls({
     syncTouches(event, false);
   };
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: event => syncTouches(event, true),
-        onPanResponderStart: event => syncTouches(event, true),
-        onPanResponderMove: event => syncTouches(event, false),
-        onPanResponderEnd: handleEnd,
-        onPanResponderRelease: () => {
-          if (gearTouchIdRef.current !== null) {
-            releaseGear();
-          }
-          pedalTouchSidesRef.current.clear();
-          callbacksRef.current.onClutchChange(0);
-          callbacksRef.current.onThrottleChange(0);
-        },
-        onPanResponderTerminate: () => {
-          cancelGear();
-          pedalTouchSidesRef.current.clear();
-          callbacksRef.current.onClutchChange(0);
-          callbacksRef.current.onThrottleChange(0);
-        },
-        onPanResponderTerminationRequest: () =>
-          gearTouchIdRef.current === null &&
-          pedalTouchSidesRef.current.size === 0,
-      }),
-    [],
+  const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(
+    null,
   );
+  if (!panResponderRef.current) {
+    panResponderRef.current = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: event => syncTouches(event, true),
+      onPanResponderStart: event => syncTouches(event, true),
+      onPanResponderMove: event => syncTouches(event, false),
+      onPanResponderEnd: handleEnd,
+      onPanResponderRelease: () => {
+        if (gearTouchIdRef.current !== null) {
+          releaseGear();
+        }
+        pedalTouchSidesRef.current.clear();
+        callbacksRef.current.onClutchChange(0);
+        callbacksRef.current.onThrottleChange(0);
+      },
+      onPanResponderTerminate: () => {
+        cancelGear();
+        pedalTouchSidesRef.current.clear();
+        callbacksRef.current.onClutchChange(0);
+        callbacksRef.current.onThrottleChange(0);
+      },
+      onPanResponderTerminationRequest: () =>
+        gearTouchIdRef.current === null &&
+        pedalTouchSidesRef.current.size === 0,
+    });
+  }
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
+    <View
+      style={[styles.container, compact && styles.compactContainer]}
+      {...panResponderRef.current.panHandlers}
+    >
       <View
         pointerEvents="none"
+        style={compact && styles.gearArea}
+        testID="gear-input-region"
         onLayout={event => {
           gearContainerRef.current = event.nativeEvent.layout;
         }}
@@ -282,15 +287,18 @@ export function DrivingControls({
           onPatternLayout={layout => {
             gearPatternRef.current = layout;
           }}
+          compact={compact}
         />
       </View>
       <View
         pointerEvents="none"
+        style={compact && styles.pedalArea}
+        testID="pedal-input-region"
         onLayout={event => {
           pedalRegionRef.current = event.nativeEvent.layout;
         }}
       >
-        <PedalControls clutch={clutch} throttle={throttle} />
+        <PedalControls clutch={clutch} throttle={throttle} compact={compact} />
       </View>
     </View>
   );
@@ -302,4 +310,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16,
   },
+  compactContainer: { flexDirection: 'row-reverse', gap: 10, marginTop: 8 },
+  gearArea: { flex: 1.2 },
+  pedalArea: { flex: 0.8 },
 });
