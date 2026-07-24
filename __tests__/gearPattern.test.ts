@@ -59,4 +59,11 @@ describe('H-pattern coordinate mapping', () => {
     });
     expect(constrainToGearPattern({ x: 0, y: 1 })).toEqual({ x: 0.18, y: 0.8 });
   });
+
+  it('keeps the displayed rail consistent with the committed gear near neutral', () => {
+    const release = { x: 0.5, y: 0.34 };
+
+    expect(constrainToGearPattern(release)).toEqual(release);
+    expect(gearFromPosition(release)).toBe(3);
+  });
 });

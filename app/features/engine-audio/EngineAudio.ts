@@ -58,8 +58,10 @@ export async function startEngineAudio(): Promise<boolean> {
   const requestedVersion = lifecycleVersion;
   let pendingStart!: Promise<boolean>;
   pendingStart = (async () => {
+    let nativeAudioInitialized = false;
     try {
       await nativeModule.initialize();
+      nativeAudioInitialized = true;
       await nativeModule.startEngineEvent(ENGINE_EVENT_PATH);
 
       if (requestedVersion !== lifecycleVersion) {
@@ -72,6 +74,15 @@ export async function startEngineAudio(): Promise<boolean> {
       return true;
     } catch (error) {
       initialized = false;
+      if (nativeAudioInitialized) {
+        try {
+          await nativeModule.stop();
+        } catch (stopError) {
+          if (__DEV__) {
+            console.warn('FMOD engine audio failed to stop', stopError);
+          }
+        }
+      }
       if (__DEV__) {
         console.warn('FMOD engine audio failed to start', error);
       }

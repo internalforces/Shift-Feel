@@ -75,7 +75,7 @@ export function gearFromPosition(position: NormalizedPosition): Gear | null {
 export function constrainToGearPattern(
   position: NormalizedPosition,
 ): NormalizedPosition {
-  if (Math.abs(position.y - 0.5) <= NEUTRAL_HALF_HEIGHT + 0.02) {
+  if (Math.abs(position.y - 0.5) <= NEUTRAL_HALF_HEIGHT) {
     return { x: Math.min(0.82, Math.max(0.18, position.x)), y: 0.5 };
   }
 
