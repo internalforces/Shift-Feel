@@ -127,6 +127,22 @@ describe('vehicle simulation', () => {
     ).toMatchObject({ feedback: 'off', engineRunning: false });
   });
 
+  it('keeps manual engine-off feedback while changing gears before restarting', () => {
+    const stopped = stopEngine({
+      ...RUNNING_VEHICLE_STATE,
+      rpm: 2400,
+    });
+    const inFirst = requestGear(stopped, 1, 1);
+    const next = stepSimulation(
+      inFirst,
+      { throttle: 0, clutch: 0, brake: 0 },
+      0.1,
+    );
+
+    expect(inFirst).toMatchObject({ gear: 1, feedback: 'off' });
+    expect(next).toMatchObject({ engineRunning: false, feedback: 'off' });
+  });
+
   it('always allows returning to neutral', () => {
     const inFirst = requestGear(RUNNING_VEHICLE_STATE, 1, 1);
     const neutral = requestGear(inFirst, 0, 0);

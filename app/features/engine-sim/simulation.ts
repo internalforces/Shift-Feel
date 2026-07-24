@@ -85,10 +85,17 @@ export function requestGear(
 
   const assessment = assessShift(state, nextGear, clutchPedal);
   if (assessment.outcome === 'grind' || assessment.outcome === 'unsafe') {
-    return { ...state, feedback: assessment.outcome };
+    return {
+      ...state,
+      feedback: state.engineRunning ? assessment.outcome : state.feedback,
+    };
   }
 
-  return { ...state, gear: nextGear, feedback: assessment.outcome };
+  return {
+    ...state,
+    gear: nextGear,
+    feedback: state.engineRunning ? assessment.outcome : state.feedback,
+  };
 }
 
 /** Advances the deterministic vehicle simulation by a time step in seconds. */

@@ -7,6 +7,7 @@
 
 import {
   Pressable,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -34,76 +35,96 @@ function AppContent() {
     useVehicleSimulation();
   const { width, height } = useWindowDimensions();
   const compact = width > height;
+  const shortLandscape = compact && height < 360;
   const canRestart = vehicle.gear === 0;
   const canStopEngine =
     Math.abs(vehicle.speed) < ENGINE_CONFIG.minimumMovingSpeed;
   const actionDisabled = vehicle.engineRunning ? !canStopEngine : !canRestart;
 
+  const drivingSurface = (
+    <View
+      style={[
+        styles.container,
+        compact && styles.compactContainer,
+        shortLandscape && styles.shortLandscapeContainer,
+      ]}
+    >
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.eyebrow}>MANUAL DRIVE LAB</Text>
+          <Text style={[styles.title, compact && styles.compactTitle]}>
+            SHIFT FEEL
+          </Text>
+        </View>
+        <Pressable
+          accessibilityLabel={
+            vehicle.engineRunning
+              ? canStopEngine
+                ? '시동 끄기'
+                : '주행 중에는 시동을 끌 수 없습니다'
+              : canRestart
+              ? '시동 걸기'
+              : 'N단으로 변속'
+          }
+          disabled={actionDisabled}
+          style={[
+            styles.restartButton,
+            vehicle.engineRunning && styles.stopButton,
+            actionDisabled && styles.restartDisabled,
+          ]}
+          onPress={vehicle.engineRunning ? stopEngine : startEngine}
+        >
+          <Text style={styles.restartText}>
+            {vehicle.engineRunning
+              ? '시동 끄기'
+              : canRestart
+              ? '시동 걸기'
+              : 'N단으로 변속'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <Dashboard
+        rpm={vehicle.rpm}
+        speed={vehicle.speed}
+        gear={vehicle.gear}
+        feedback={vehicle.feedback}
+        compact={compact}
+      />
+
+      <DrivingControls
+        selectedGear={vehicle.gear}
+        clutch={input.clutch}
+        brake={input.brake}
+        throttle={input.throttle}
+        onSelectGear={selectGear}
+        onClutchChange={clutch => updateInput({ clutch })}
+        onBrakeChange={brake => updateInput({ brake })}
+        onThrottleChange={throttle => updateInput({ throttle })}
+        compact={compact}
+      />
+
+      {!compact && (
+        <Text style={styles.guide}>
+          클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히
+          놓아보세요
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, compact && styles.compactContainer]}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.eyebrow}>MANUAL DRIVE LAB</Text>
-            <Text style={[styles.title, compact && styles.compactTitle]}>
-              SHIFT FEEL
-            </Text>
-          </View>
-          <Pressable
-            accessibilityLabel={
-              vehicle.engineRunning
-                ? canStopEngine
-                  ? '시동 끄기'
-                  : '주행 중에는 시동을 끌 수 없습니다'
-                : canRestart
-                ? '시동 걸기'
-                : 'N단으로 변속'
-            }
-            disabled={actionDisabled}
-            style={[
-              styles.restartButton,
-              vehicle.engineRunning && styles.stopButton,
-              actionDisabled && styles.restartDisabled,
-            ]}
-            onPress={vehicle.engineRunning ? stopEngine : startEngine}
-          >
-            <Text style={styles.restartText}>
-              {vehicle.engineRunning
-                ? '시동 끄기'
-                : canRestart
-                ? '시동 걸기'
-                : 'N단으로 변속'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <Dashboard
-          rpm={vehicle.rpm}
-          speed={vehicle.speed}
-          gear={vehicle.gear}
-          feedback={vehicle.feedback}
-          compact={compact}
-        />
-
-        <DrivingControls
-          selectedGear={vehicle.gear}
-          clutch={input.clutch}
-          brake={input.brake}
-          throttle={input.throttle}
-          onSelectGear={selectGear}
-          onClutchChange={clutch => updateInput({ clutch })}
-          onBrakeChange={brake => updateInput({ brake })}
-          onThrottleChange={throttle => updateInput({ throttle })}
-          compact={compact}
-        />
-
-        {!compact && (
-          <Text style={styles.guide}>
-            클러치를 누른 채 기어 선택 → 스로틀을 누르며 클러치를 천천히
-            놓아보세요
-          </Text>
-        )}
-      </View>
+      {shortLandscape ? (
+        <ScrollView
+          style={styles.shortLandscapeScroll}
+          contentContainerStyle={styles.shortLandscapeScrollContent}
+        >
+          {drivingSurface}
+        </ScrollView>
+      ) : (
+        drivingSurface
+      )}
     </SafeAreaView>
   );
 }
@@ -119,6 +140,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   compactContainer: { paddingHorizontal: 14, paddingVertical: 6 },
+  shortLandscapeContainer: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+  },
+  shortLandscapeScroll: { flex: 1 },
+  shortLandscapeScrollContent: { paddingBottom: 12 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
