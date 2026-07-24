@@ -155,6 +155,15 @@ RCT_REMAP_METHOD(initialize,
     return;
   }
 
+  NSError *audioSessionError = nil;
+  AVAudioSession *audioSession = [AVAudioSession sharedInstance];
+  if (![audioSession setCategory:AVAudioSessionCategoryPlayback
+                     error:&audioSessionError] ||
+      ![audioSession setActive:YES error:&audioSessionError]) {
+    reject(@"FMOD_AUDIO_SESSION_FAILED", audioSessionError.localizedDescription, nil);
+    return;
+  }
+
   FMOD_RESULT result = FMOD::Studio::System::create(&_studioSystem);
   if (result == FMOD_OK) {
     result = _studioSystem->initialize(
