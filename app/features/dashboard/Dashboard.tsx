@@ -11,7 +11,7 @@ interface DashboardProps {
   compact?: boolean;
 }
 
-const FEEDBACK_LABEL: Record<Exclude<Feedback, 'stalled'>, string> = {
+const FEEDBACK_LABEL: Record<Exclude<Feedback, 'stalled' | 'off'>, string> = {
   ready: '클러치를 밟고 기어를 선택하세요',
   smooth: '부드럽게 체결되었습니다',
   jerk: '회전수 차이로 차체가 울컥합니다',
@@ -20,13 +20,16 @@ const FEEDBACK_LABEL: Record<Exclude<Feedback, 'stalled'>, string> = {
 };
 
 const feedbackLabel = (feedback: Feedback, gear: Gear) => {
-  if (feedback !== 'stalled') {
+  if (feedback !== 'stalled' && feedback !== 'off') {
     return FEEDBACK_LABEL[feedback];
   }
 
+  const engineOffMessage =
+    feedback === 'off' ? '시동이 꺼져 있습니다' : '시동이 꺼졌습니다';
+
   return gear === 0
-    ? '시동이 꺼졌습니다 — 시동 걸기를 누르세요'
-    : '시동이 꺼졌습니다 — N단으로 변속하세요';
+    ? `${engineOffMessage} — 시동 걸기를 누르세요`
+    : `${engineOffMessage} — N단으로 변속하세요`;
 };
 
 export function Dashboard({
@@ -65,11 +68,11 @@ export function Dashboard({
         <View style={[styles.rpmFill, { width: `${rpmRatio * 100}%` }]} />
       </View>
       <Text
-        numberOfLines={feedback === 'stalled' ? 2 : 1}
+        numberOfLines={feedback === 'stalled' || feedback === 'off' ? 2 : 1}
         style={[
           styles.feedback,
           compact && styles.compactFeedback,
-          feedback === 'stalled' && styles.alert,
+          (feedback === 'stalled' || feedback === 'off') && styles.alert,
         ]}
       >
         {feedbackLabel(feedback, gear)}

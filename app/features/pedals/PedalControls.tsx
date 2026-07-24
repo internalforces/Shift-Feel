@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 interface PedalControlsProps {
   clutch: number;
+  brake: number;
   throttle: number;
   compact?: boolean;
 }
@@ -21,13 +22,22 @@ function PedalMeter({
   showBiteZone,
   compact = false,
 }: PedalMeterProps) {
+  const percentage = `${Math.round(value * 100)}%`;
+
   return (
     <View style={[styles.pedal, compact && styles.compactPedal]}>
       <View style={styles.pedalHeader}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.value}>{Math.round(value * 100)}%</Text>
+        <Text
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
+          numberOfLines={1}
+          style={[styles.label, compact && styles.compactLabel]}
+        >
+          {label}
+        </Text>
       </View>
       <View style={styles.track}>
+        <Text style={styles.valueInTrack}>{percentage}</Text>
         {showBiteZone && (
           <View style={styles.biteZone}>
             <Text style={styles.biteLabel}>BITE</Text>
@@ -47,12 +57,13 @@ function PedalMeter({
 
 export function PedalControls({
   clutch,
+  brake,
   throttle,
   compact = false,
 }: PedalControlsProps) {
   return (
     <View
-      accessibilityLabel="dual pedal controls"
+      accessibilityLabel="three pedal controls"
       pointerEvents="none"
       style={[styles.container, compact && styles.compactContainer]}
     >
@@ -64,7 +75,13 @@ export function PedalControls({
         compact={compact}
       />
       <PedalMeter
-        label="THROTTLE"
+        label="BRAKE"
+        value={brake}
+        accent="#FF7B72"
+        compact={compact}
+      />
+      <PedalMeter
+        label="ACCELERATOR"
         value={throttle}
         accent="#F0883E"
         compact={compact}
@@ -89,8 +106,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 9,
   },
-  label: { color: '#C9D1D9', fontSize: 12, fontWeight: '700' },
-  value: { color: '#F0F6FC', fontSize: 13, fontWeight: '800' },
+  label: {
+    color: '#C9D1D9',
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  compactLabel: { fontSize: 8, letterSpacing: 0 },
   track: {
     flex: 1,
     minHeight: 82,
@@ -98,8 +120,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#30363D',
     overflow: 'hidden',
     justifyContent: 'flex-end',
+    position: 'relative',
   },
   fill: { width: '100%' },
+  valueInTrack: {
+    color: '#F0F6FC',
+    fontSize: 12,
+    fontWeight: '800',
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    textAlign: 'center',
+    top: 8,
+    zIndex: 2,
+  },
   biteZone: {
     position: 'absolute',
     left: 0,

@@ -22,15 +22,17 @@ import { pedalValuesFromTouches } from '../pedals/pedalMath';
 interface DrivingControlsProps {
   selectedGear: Gear;
   clutch: number;
+  brake: number;
   throttle: number;
   onSelectGear: (gear: Gear) => boolean;
   onClutchChange: (value: number) => void;
+  onBrakeChange: (value: number) => void;
   onThrottleChange: (value: number) => void;
   compact?: boolean;
 }
 
 type Region = LayoutRectangle;
-type PedalSide = 'clutch' | 'throttle';
+type PedalSide = 'clutch' | 'brake' | 'throttle';
 
 const contains = (region: Region, x: number, y: number) =>
   x >= region.x &&
@@ -41,9 +43,11 @@ const contains = (region: Region, x: number, y: number) =>
 export function DrivingControls({
   selectedGear,
   clutch,
+  brake,
   throttle,
   onSelectGear,
   onClutchChange,
+  onBrakeChange,
   onThrottleChange,
   compact = false,
 }: DrivingControlsProps) {
@@ -62,12 +66,14 @@ export function DrivingControls({
   const callbacksRef = useRef({
     onSelectGear,
     onClutchChange,
+    onBrakeChange,
     onThrottleChange,
   });
   selectedGearRef.current = selectedGear;
   callbacksRef.current = {
     onSelectGear,
     onClutchChange,
+    onBrakeChange,
     onThrottleChange,
   };
 
@@ -174,9 +180,12 @@ export function DrivingControls({
           !pedalTouchSidesRef.current.has(touch.identifier) &&
           contains(pedalRegion, touch.locationX, touch.locationY)
         ) {
-          const side =
-            touch.locationX < pedalRegion.x + pedalRegion.width / 2
+          const relativeX = touch.locationX - pedalRegion.x;
+          const side: PedalSide =
+            relativeX < pedalRegion.width / 3
               ? 'clutch'
+              : relativeX < (pedalRegion.width * 2) / 3
+              ? 'brake'
               : 'throttle';
           pedalTouchSidesRef.current.set(touch.identifier, side);
         }
@@ -193,8 +202,10 @@ export function DrivingControls({
           {
             locationX:
               side === 'clutch'
-                ? pedalRegion.width * 0.25
-                : pedalRegion.width * 0.75,
+                ? pedalRegion.width / 6
+                : side === 'brake'
+                ? pedalRegion.width / 2
+                : (pedalRegion.width * 5) / 6,
             locationY: touch.locationY - pedalRegion.y,
           },
         ];
@@ -205,6 +216,7 @@ export function DrivingControls({
         pedalRegion.height,
       );
       callbacksRef.current.onClutchChange(values.clutch);
+      callbacksRef.current.onBrakeChange(values.brake);
       callbacksRef.current.onThrottleChange(values.throttle);
     }
   };
@@ -258,12 +270,14 @@ export function DrivingControls({
         }
         pedalTouchSidesRef.current.clear();
         callbacksRef.current.onClutchChange(0);
+        callbacksRef.current.onBrakeChange(0);
         callbacksRef.current.onThrottleChange(0);
       },
       onPanResponderTerminate: () => {
         cancelGear();
         pedalTouchSidesRef.current.clear();
         callbacksRef.current.onClutchChange(0);
+        callbacksRef.current.onBrakeChange(0);
         callbacksRef.current.onThrottleChange(0);
       },
       onPanResponderTerminationRequest: () =>
@@ -303,7 +317,12 @@ export function DrivingControls({
           pedalRegionRef.current = event.nativeEvent.layout;
         }}
       >
-        <PedalControls clutch={clutch} throttle={throttle} compact={compact} />
+        <PedalControls
+          clutch={clutch}
+          brake={brake}
+          throttle={throttle}
+          compact={compact}
+        />
       </View>
     </View>
   );

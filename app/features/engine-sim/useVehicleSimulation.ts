@@ -11,6 +11,7 @@ import {
   INITIAL_VEHICLE_STATE,
   requestGear,
   restartEngine,
+  stopEngine as stopVehicleEngine,
   stepSimulation,
   type DriverInput,
   type Gear,
@@ -20,7 +21,11 @@ const SIMULATION_INTERVAL_MS = 50;
 
 export function useVehicleSimulation() {
   const [vehicle, setVehicle] = useState(INITIAL_VEHICLE_STATE);
-  const [input, setInput] = useState<DriverInput>({ throttle: 0, clutch: 0 });
+  const [input, setInput] = useState<DriverInput>({
+    throttle: 0,
+    clutch: 0,
+    brake: 0,
+  });
   const inputRef = useRef(input);
   const vehicleRef = useRef(vehicle);
   vehicleRef.current = vehicle;
@@ -37,6 +42,9 @@ export function useVehicleSimulation() {
     let mounted = true;
 
     const startAndSyncAudio = async () => {
+      if (!vehicleRef.current.engineRunning) {
+        return;
+      }
       const started = await startEngineAudio();
       if (mounted && started) {
         const current = vehicleRef.current;
@@ -71,6 +79,12 @@ export function useVehicleSimulation() {
   }, [vehicle.rpm, vehicle.feedback]);
 
   useEffect(() => {
+    if (!vehicle.engineRunning) {
+      void stopEngineAudio();
+    }
+  }, [vehicle.engineRunning]);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setVehicle(current => {
         const next = stepSimulation(
@@ -101,7 +115,21 @@ export function useVehicleSimulation() {
     const next = restartEngine(vehicleRef.current);
     vehicleRef.current = next;
     setVehicle(next);
+    if (next.engineRunning) {
+      void startEngineAudio().then(started => {
+        if (started) {
+          syncEngineAudio(next.rpm, next.feedback);
+        }
+      });
+    }
   }, []);
 
-  return { vehicle, input, updateInput, selectGear, startEngine };
+  const stopEngine = useCallback(() => {
+    const next = stopVehicleEngine(vehicleRef.current);
+    vehicleRef.current = next;
+    setVehicle(next);
+    void stopEngineAudio();
+  }, []);
+
+  return { vehicle, input, updateInput, selectGear, startEngine, stopEngine };
 }

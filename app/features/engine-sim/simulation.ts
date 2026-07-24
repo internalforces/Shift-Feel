@@ -3,6 +3,7 @@ import { assessShift } from './shiftTiming';
 
 export type Gear = -1 | 0 | 1 | 2 | 3 | 4 | 5;
 export type Feedback =
+  | 'off'
   | 'ready'
   | 'smooth'
   | 'jerk'
@@ -21,14 +22,15 @@ export interface VehicleState {
 export interface DriverInput {
   throttle: number;
   clutch: number;
+  brake: number;
 }
 
 export const INITIAL_VEHICLE_STATE: VehicleState = {
-  rpm: ENGINE_CONFIG.idleRpm,
+  rpm: 0,
   speed: 0,
   gear: 0,
-  engineRunning: true,
-  feedback: 'ready',
+  engineRunning: false,
+  feedback: 'off',
 };
 
 const clamp = (value: number, minimum: number, maximum: number) =>
@@ -77,7 +79,7 @@ export function requestGear(
     return {
       ...state,
       gear: 0,
-      feedback: state.engineRunning ? 'ready' : 'stalled',
+      feedback: state.engineRunning ? 'ready' : state.feedback,
     };
   }
 
@@ -98,14 +100,19 @@ export function stepSimulation(
   const delta = clamp(deltaSeconds, 0, 0.1);
   const throttle = clamp(rawInput.throttle, 0, 1);
   const clutch = clamp(rawInput.clutch, 0, 1);
+  const brake = clamp(rawInput.brake, 0, 1);
   const engagement = getClutchEngagement(clutch);
+  const resistance =
+    (ENGINE_CONFIG.dragPerSecond +
+      brake * ENGINE_CONFIG.brakeDecelerationPerSecond) *
+    delta;
 
   if (!state.engineRunning) {
     return {
       ...state,
       rpm: 0,
-      speed: applyDrag(state.speed, ENGINE_CONFIG.dragPerSecond * delta),
-      feedback: 'stalled',
+      speed: applyDrag(state.speed, resistance),
+      feedback: state.feedback === 'off' ? 'off' : 'stalled',
     };
   }
 
@@ -122,7 +129,7 @@ export function stepSimulation(
         ENGINE_CONFIG.neutralRpmResponse,
         delta,
       ),
-      speed: applyDrag(state.speed, ENGINE_CONFIG.dragPerSecond * delta),
+      speed: applyDrag(state.speed, resistance),
     };
   }
 
@@ -154,7 +161,7 @@ export function stepSimulation(
   const speedAfterDrive = state.speed + acceleration * direction * delta;
   const speedLimit = getGearSpeedLimit(state.gear);
   const speed = clamp(
-    applyDrag(speedAfterDrive, ENGINE_CONFIG.dragPerSecond * delta),
+    applyDrag(speedAfterDrive, resistance),
     state.gear === -1 ? -speedLimit : 0,
     state.gear === -1 ? 0 : speedLimit,
   );
@@ -177,5 +184,15 @@ export function restartEngine(state: VehicleState): VehicleState {
     rpm: ENGINE_CONFIG.idleRpm,
     engineRunning: true,
     feedback: 'ready',
+  };
+}
+
+/** Turns the engine off without treating the deliberate action as a stall. */
+export function stopEngine(state: VehicleState): VehicleState {
+  return {
+    ...state,
+    rpm: 0,
+    engineRunning: false,
+    feedback: 'off',
   };
 }

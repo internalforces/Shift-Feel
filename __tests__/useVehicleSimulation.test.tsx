@@ -31,11 +31,12 @@ test('simulation hook connects controls to timed vehicle updates', async () => {
   });
 
   await ReactTestRenderer.act(() => {
+    controller?.startEngine();
     controller?.updateInput({ clutch: 1 });
   });
   await ReactTestRenderer.act(() => {
     controller?.selectGear(1);
-    controller?.updateInput({ throttle: 1, clutch: 0 });
+    controller?.updateInput({ throttle: 1, clutch: 0, brake: 0 });
     jest.advanceTimersByTime(500);
   });
 
@@ -43,7 +44,6 @@ test('simulation hook connects controls to timed vehicle updates', async () => {
   expect(controller?.input.throttle).toBe(1);
 
   await ReactTestRenderer.act(() => {
-    controller?.startEngine();
     renderer.unmount();
   });
   jest.useRealTimers();

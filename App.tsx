@@ -17,6 +17,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { DrivingControls } from './app/features/controls/DrivingControls';
 import { Dashboard } from './app/features/dashboard/Dashboard';
+import { ENGINE_CONFIG } from './app/features/engine-sim/config';
 import { useVehicleSimulation } from './app/features/engine-sim/useVehicleSimulation';
 
 function App() {
@@ -29,11 +30,14 @@ function App() {
 }
 
 function AppContent() {
-  const { vehicle, input, updateInput, selectGear, startEngine } =
+  const { vehicle, input, updateInput, selectGear, startEngine, stopEngine } =
     useVehicleSimulation();
   const { width, height } = useWindowDimensions();
   const compact = width > height;
   const canRestart = vehicle.gear === 0;
+  const canStopEngine =
+    Math.abs(vehicle.speed) < ENGINE_CONFIG.minimumMovingSpeed;
+  const actionDisabled = vehicle.engineRunning ? !canStopEngine : !canRestart;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -45,18 +49,32 @@ function AppContent() {
               SHIFT FEEL
             </Text>
           </View>
-          {!vehicle.engineRunning && (
-            <Pressable
-              accessibilityLabel={canRestart ? '시동 걸기' : 'N단으로 변속'}
-              disabled={!canRestart}
-              style={[styles.restartButton, !canRestart && styles.restartDisabled]}
-              onPress={startEngine}
-            >
-              <Text style={styles.restartText}>
-                {canRestart ? '시동 걸기' : 'N단으로 변속'}
-              </Text>
-            </Pressable>
-          )}
+          <Pressable
+            accessibilityLabel={
+              vehicle.engineRunning
+                ? canStopEngine
+                  ? '시동 끄기'
+                  : '주행 중에는 시동을 끌 수 없습니다'
+                : canRestart
+                ? '시동 걸기'
+                : 'N단으로 변속'
+            }
+            disabled={actionDisabled}
+            style={[
+              styles.restartButton,
+              vehicle.engineRunning && styles.stopButton,
+              actionDisabled && styles.restartDisabled,
+            ]}
+            onPress={vehicle.engineRunning ? stopEngine : startEngine}
+          >
+            <Text style={styles.restartText}>
+              {vehicle.engineRunning
+                ? '시동 끄기'
+                : canRestart
+                ? '시동 걸기'
+                : 'N단으로 변속'}
+            </Text>
+          </Pressable>
         </View>
 
         <Dashboard
@@ -70,9 +88,11 @@ function AppContent() {
         <DrivingControls
           selectedGear={vehicle.gear}
           clutch={input.clutch}
+          brake={input.brake}
           throttle={input.throttle}
           onSelectGear={selectGear}
           onClutchChange={clutch => updateInput({ clutch })}
+          onBrakeChange={brake => updateInput({ brake })}
           onThrottleChange={throttle => updateInput({ throttle })}
           compact={compact}
         />
@@ -124,6 +144,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
+  stopButton: { backgroundColor: '#FF7B72' },
   restartDisabled: { backgroundColor: '#30363D' },
   restartText: { color: '#0D1117', fontSize: 12, fontWeight: '800' },
   guide: {

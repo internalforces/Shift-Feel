@@ -13,17 +13,19 @@ describe('continuous pedal coordinate mapping', () => {
     expect(pedalValueFromY(10, 0)).toBe(0);
   });
 
-  it('tracks clutch and throttle from two simultaneous touches', () => {
+  it('tracks clutch, brake, and throttle from simultaneous touches', () => {
     const values = pedalValuesFromTouches(
       [
         { locationX: 40, locationY: 25 },
-        { locationX: 160, locationY: 60 },
+        { locationX: 100, locationY: 50 },
+        { locationX: 180, locationY: 60 },
       ],
-      200,
+      240,
       100,
     );
 
     expect(values.clutch).toBe(0.75);
+    expect(values.brake).toBe(0.5);
     expect(values.throttle).toBe(0.4);
   });
 
@@ -34,16 +36,18 @@ describe('continuous pedal coordinate mapping', () => {
           { locationX: 10, locationY: 70 },
           { locationX: 20, locationY: 20 },
         ],
-        200,
+        240,
         100,
       ),
-    ).toEqual({ clutch: 0.8, throttle: 0 });
+    ).toEqual({ clutch: 0.8, brake: 0, throttle: 0 });
     expect(pedalValuesFromTouches([], 200, 100)).toEqual({
       clutch: 0,
+      brake: 0,
       throttle: 0,
     });
     expect(pedalValuesFromTouches([], 0, 0)).toEqual({
       clutch: 0,
+      brake: 0,
       throttle: 0,
     });
   });
