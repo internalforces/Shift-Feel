@@ -10,6 +10,7 @@ export const ENGINE_CONFIG = {
   neutralRpmResponse: 3.2,
   coupledRpmResponse: 4.5,
   rpmMismatchForJerk: 1700,
+  maximumStandingStartGear: 2,
   directionChangeMaxSpeed: 0.05,
   minimumMovingSpeed: 0.05,
 } as const;

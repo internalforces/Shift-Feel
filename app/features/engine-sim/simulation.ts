@@ -46,6 +46,11 @@ const approach = (
 const applyDrag = (speed: number, amount: number) =>
   Math.sign(speed) * Math.max(0, Math.abs(speed) - amount);
 
+const isStandingStartBeyondSecond = (state: VehicleState, nextGear: Gear) =>
+  state.gear === 0 &&
+  Math.abs(state.speed) <= ENGINE_CONFIG.directionChangeMaxSpeed &&
+  nextGear > ENGINE_CONFIG.maximumStandingStartGear;
+
 const getGearSpeedLimit = (gear: Exclude<Gear, 0>) => {
   const gearConfig = GEAR_CONFIG[gear];
   return Math.min(
@@ -80,6 +85,16 @@ export function requestGear(
       ...state,
       gear: 0,
       feedback: state.engineRunning ? 'ready' : state.feedback,
+    };
+  }
+
+  if (state.engineRunning && isStandingStartBeyondSecond(state, nextGear)) {
+    return {
+      ...state,
+      gear: nextGear,
+      rpm: 0,
+      engineRunning: false,
+      feedback: 'stalled',
     };
   }
 

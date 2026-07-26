@@ -78,6 +78,33 @@ describe('vehicle simulation', () => {
     expect(stalled.rpm).toBe(0);
   });
 
+  it.each([3, 4, 5] as const)(
+    'stalls when starting directly in gear %i',
+    gear => {
+      const stalled = requestGear(RUNNING_VEHICLE_STATE, gear, 1);
+
+      expect(stalled).toMatchObject({
+        gear,
+        rpm: 0,
+        engineRunning: false,
+        feedback: 'stalled',
+      });
+    },
+  );
+
+  it('allows a direct third-gear shift while already moving', () => {
+    const coastingInNeutral = {
+      ...RUNNING_VEHICLE_STATE,
+      rpm: 2200,
+      speed: 35,
+    };
+
+    const shifted = requestGear(coastingInNeutral, 3, 1);
+
+    expect(shifted).toMatchObject({ gear: 3, engineRunning: true });
+    expect(shifted.feedback).not.toBe('stalled');
+  });
+
   it('restarts a stalled engine at idle RPM', () => {
     const restarted = restartEngine({
       ...INITIAL_VEHICLE_STATE,
