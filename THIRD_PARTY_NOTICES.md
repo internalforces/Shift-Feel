@@ -1,0 +1,14 @@
+# Third-Party Notices
+
+## FMOD Engine and FMOD Studio
+
+Shift Feel contains source code for an optional bridge to FMOD Engine and FMOD Studio. The FMOD SDK, runtime libraries, sample banks, and sample media are not included in this repository and are not covered by the MIT License.
+
+Anyone using the optional FMOD integration must obtain FMOD directly from Firelight Technologies and comply with the current [FMOD legal terms](https://www.fmod.com/legal). In particular:
+
+- Do not commit or redistribute FMOD SDK files through this repository.
+- Do not redistribute FMOD example media or example bank files.
+- Add the required FMOD attribution to any distributed product that includes FMOD.
+- Confirm that your intended commercial or non-commercial use is permitted before distribution.
+
+The local setup guide is [docs/fmod-setup.md](docs/fmod-setup.md). This notice is informational and does not replace the FMOD license terms.

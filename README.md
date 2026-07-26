@@ -1,97 +1,89 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Shift Feel
 
-# Getting Started
+Shift Feel is an experimental React Native app for practising the feel of driving a manual-transmission car. It focuses on the interaction between an H-pattern gear selector, clutch, brake, throttle, engine speed, and shift feedback—not lap times or racing.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+> The canonical project documentation is in English. A Korean introduction is available in [docs/ko/README.md](docs/ko/README.md).
 
-## Step 1: Start Metro
+## Current capabilities
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+- Interactive H-pattern selector for reverse and gears 1–5
+- Independent clutch, brake, and throttle touch controls
+- Deterministic vehicle simulation for RPM, speed, engine state, and shift outcomes
+- Shift feedback for smooth shifts, jerks, rejected shifts, and engine stalls
+- Optional native FMOD bridge that maps engine RPM to an FMOD event
+- Unit tests for simulation logic, input math, gear selection, and UI integration
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+This is a prototype under active development. It is not a substitute for driving instruction, and it does not model a real vehicle with engineering accuracy.
+
+## Quick start
+
+### Prerequisites
+
+- Node.js 22.11 or later
+- npm
+- For iOS: Xcode and CocoaPods
+- For Android: Android Studio and an Android SDK
+
+### Install and run
 
 ```sh
-# Using npm
+npm ci
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+For a first iOS setup, install the Ruby dependencies and CocoaPods:
 
 ```sh
 bundle install
+bundle exec pod install --project-directory=ios
 ```
 
-Then, and every time you update your native dependencies, run:
+In a second terminal, run one platform:
 
 ```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
 npm run ios
-
-# OR using Yarn
-yarn ios
+# or
+npm run android
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+The simulation runs without a local FMOD installation. Native engine audio is optional and unavailable until the proprietary FMOD SDK is installed locally; see [docs/fmod-setup.md](docs/fmod-setup.md).
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+### Verify changes
 
-## Step 3: Modify your app
+```sh
+npm run typecheck
+npm run lint
+npm test -- --runInBand
+```
 
-Now that you have successfully run the app, let's make changes!
+## Project layout
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+```text
+app/features/
+  controls/       Driving controls composition
+  dashboard/      RPM, speed, gear, and feedback display
+  engine-audio/   Optional native audio boundary
+  engine-sim/     Deterministic vehicle simulation
+  gearbox/        H-pattern hit testing and selection
+  pedals/         Multi-touch pedal input math and UI
+docs/             Public project documentation
+scripts/          Local FMOD setup helpers
+```
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## Documentation
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+- [Architecture](docs/architecture.md)
+- [Design decisions](docs/decisions.md)
+- [Roadmap](docs/roadmap.md)
+- [FMOD setup and distribution rules](docs/fmod-setup.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 
-## Congratulations! :tada:
+## Contributing
 
-You've successfully run and modified your React Native App. :partying_face:
+Bug reports, device-testing results, simulation improvements, accessibility feedback, and documentation fixes are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull request.
 
-### Now what?
+## License
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+The source code in this repository is licensed under the [MIT License](LICENSE), except for third-party software and assets. FMOD SDK files and FMOD example media are not included in this repository and are governed by their own terms. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
