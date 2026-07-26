@@ -30,6 +30,10 @@ npm test -- --runInBand
 - Explain non-obvious state transitions, especially gear, clutch, RPM, and audio behaviour.
 - Keep pull requests focused and include a short description of user-visible behaviour.
 
+## Contribution license
+
+By submitting a contribution, you agree to license it under this repository's [MIT License](LICENSE).
+
 ## Testing on devices
 
 Automated tests cannot fully validate multi-touch input, screen layout, or audio latency. If you test on a device, include the device model, OS version, orientation, and observed result in the pull request or issue.

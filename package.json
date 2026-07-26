@@ -2,6 +2,16 @@
   "name": "shift-feel",
   "version": "0.0.1",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/internalforces/Shift-Feel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/internalforces/Shift-Feel/issues"
+  },
+  "homepage": "https://github.com/internalforces/Shift-Feel#readme",
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",

@@ -27,6 +27,7 @@ This is a prototype under active development. It is not a substitute for driving
 ### Install and run
 
 ```sh
+nvm use
 npm ci
 npm start
 ```
