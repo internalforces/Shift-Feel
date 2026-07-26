@@ -16,6 +16,7 @@ If signing is absent, incomplete, or points to a missing keystore, every release
 
 - Confirm the version number for Android and iOS.
 - Run lint, type checking, unit tests, and device QA.
+- Record the device results using the [device QA checklist](device-qa.md).
 - Review third-party notices and FMOD licensing requirements.
 - Use original or properly licensed audio assets; do not ship FMOD example banks or media.
-- Provide the required privacy information and store disclosures.
+- Review [PRIVACY.md](../PRIVACY.md) and provide the required store disclosures.

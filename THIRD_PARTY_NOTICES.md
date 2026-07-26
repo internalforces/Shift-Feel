@@ -12,3 +12,13 @@ Anyone using the optional FMOD integration must obtain FMOD directly from Fireli
 - Confirm that your intended commercial or non-commercial use is permitted before distribution.
 
 The local setup guide is [docs/fmod-setup.md](docs/fmod-setup.md). This notice is informational and does not replace the FMOD license terms.
+
+## Open-source dependency inventory
+
+[`sbom.cdx.json`](sbom.cdx.json) is a CycloneDX software bill of materials generated from the locked npm dependency tree. Regenerate it after dependency updates with:
+
+```sh
+npm run sbom
+```
+
+The SBOM records package identities, versions, and declared licenses. It complements, but does not replace, the license texts and notices that may be required in a distributed application. Before a store release, also generate and include the applicable CocoaPods and native dependency acknowledgements.

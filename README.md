@@ -77,8 +77,10 @@ scripts/          Local FMOD setup helpers
 - [Design decisions](docs/decisions.md)
 - [Roadmap](docs/roadmap.md)
 - [Release builds](docs/releasing.md)
+- [Device QA](docs/device-qa.md)
 - [FMOD setup and distribution rules](docs/fmod-setup.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
+- [Privacy policy](PRIVACY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 
