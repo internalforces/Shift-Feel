@@ -2,6 +2,8 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+import java.util.Properties
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -73,6 +75,24 @@ def enableProguardInReleaseBuilds = false
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 def fmodRoot = file("src/fmod")
 def fmodInstalled = file("src/fmod/vendor/api/core/inc/fmod.hpp").exists()
+def releaseSigningPropertiesFile = rootProject.file("keystore.properties")
+def releaseSigningProperties = new Properties()
+
+if (releaseSigningPropertiesFile.exists()) {
+    releaseSigningPropertiesFile.withInputStream { stream ->
+        releaseSigningProperties.load(stream)
+    }
+}
+
+def requiredReleaseSigningProperties = ["storeFile", "storePassword", "keyAlias", "keyPassword"]
+def missingReleaseSigningProperties = requiredReleaseSigningProperties.findAll {
+    !releaseSigningProperties.getProperty(it)
+}
+def releaseKeystoreFile = releaseSigningProperties.getProperty("storeFile")
+def releaseSigningReady =
+    missingReleaseSigningProperties.isEmpty() &&
+    releaseKeystoreFile != null &&
+    rootProject.file(releaseKeystoreFile).exists()
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -107,17 +127,42 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (releaseSigningReady) {
+                storeFile rootProject.file(releaseKeystoreFile)
+                storePassword releaseSigningProperties.getProperty("storePassword")
+                keyAlias releaseSigningProperties.getProperty("keyAlias")
+                keyPassword releaseSigningProperties.getProperty("keyPassword")
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (releaseSigningReady) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == "preReleaseBuild") {
+        task.doFirst {
+            if (!releaseSigningReady) {
+                def propertyProblem = missingReleaseSigningProperties.isEmpty()
+                    ? "the keystore file '${releaseKeystoreFile}' does not exist"
+                    : "missing properties: ${missingReleaseSigningProperties.join(', ')}"
+                throw new GradleException(
+                    "Release signing is not configured (${propertyProblem}). " +
+                    "Copy android/keystore.properties.example to android/keystore.properties " +
+                    "and provide a private release keystore.",
+                )
+            }
         }
     }
 }

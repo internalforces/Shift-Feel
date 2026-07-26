@@ -75,6 +75,7 @@ scripts/          Local FMOD setup helpers
 - [Architecture](docs/architecture.md)
 - [Design decisions](docs/decisions.md)
 - [Roadmap](docs/roadmap.md)
+- [Release builds](docs/releasing.md)
 - [FMOD setup and distribution rules](docs/fmod-setup.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - [Contributing](CONTRIBUTING.md)
