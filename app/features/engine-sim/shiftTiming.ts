@@ -26,25 +26,34 @@ export function assessShift(
     return { outcome: 'grind', targetRpm: null, rpmMismatch: null };
   }
 
-  const unsafeDirectionChange =
-    (nextGear === -1 && state.speed > ENGINE_CONFIG.directionChangeMaxSpeed) ||
-    (nextGear > 0 && state.speed < -ENGINE_CONFIG.directionChangeMaxSpeed);
+  const changingDirectionWithoutNeutral =
+    (nextGear === -1 && state.gear > 0) || (nextGear > 0 && state.gear === -1);
+  const reverseWhileMoving =
+    nextGear === -1 &&
+    Math.abs(state.speed) > ENGINE_CONFIG.directionChangeMaxSpeed;
+  const forwardWhileReversing =
+    nextGear > 0 && state.speed < -ENGINE_CONFIG.directionChangeMaxSpeed;
   const gearConfig = GEAR_CONFIG[nextGear];
   const speedRpm = Math.abs(state.speed) * gearConfig.rpmPerKph;
   const targetRpm = Math.max(ENGINE_CONFIG.idleRpm, speedRpm);
 
   if (
-    unsafeDirectionChange ||
+    changingDirectionWithoutNeutral ||
+    reverseWhileMoving ||
+    forwardWhileReversing ||
     Math.abs(state.speed) > gearConfig.maxSpeed ||
     speedRpm > ENGINE_CONFIG.redlineRpm
   ) {
-    return { outcome: 'unsafe', targetRpm, rpmMismatch: Math.abs(state.rpm - targetRpm) };
+    return {
+      outcome: 'unsafe',
+      targetRpm,
+      rpmMismatch: Math.abs(state.rpm - targetRpm),
+    };
   }
 
   const rpmMismatch = Math.abs(state.rpm - targetRpm);
   return {
-    outcome:
-      rpmMismatch > ENGINE_CONFIG.rpmMismatchForJerk ? 'jerk' : 'smooth',
+    outcome: rpmMismatch > ENGINE_CONFIG.rpmMismatchForJerk ? 'jerk' : 'smooth',
     targetRpm,
     rpmMismatch,
   };

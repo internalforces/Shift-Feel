@@ -5,6 +5,7 @@ export interface PedalTouch {
 
 export interface PedalValues {
   clutch: number;
+  brake: number;
   throttle: number;
 }
 
@@ -20,28 +21,31 @@ export function pedalValueFromY(locationY: number, height: number): number {
   return clamp(1 - locationY / height, 0, 1);
 }
 
-/** Resolves all active touches into independent left-clutch and right-throttle values. */
+/** Resolves all active touches into independent clutch, brake, and throttle values. */
 export function pedalValuesFromTouches(
   touches: readonly PedalTouch[],
   width: number,
   height: number,
 ): PedalValues {
   if (width <= 0 || height <= 0) {
-    return { clutch: 0, throttle: 0 };
+    return { clutch: 0, brake: 0, throttle: 0 };
   }
 
   let clutch = 0;
+  let brake = 0;
   let throttle = 0;
-  const midpoint = width / 2;
+  const pedalWidth = width / 3;
 
   for (const touch of touches) {
     const value = pedalValueFromY(touch.locationY, height);
-    if (touch.locationX < midpoint) {
+    if (touch.locationX < pedalWidth) {
       clutch = Math.max(clutch, value);
+    } else if (touch.locationX < pedalWidth * 2) {
+      brake = Math.max(brake, value);
     } else {
       throttle = Math.max(throttle, value);
     }
   }
 
-  return { clutch, throttle };
+  return { clutch, brake, throttle };
 }

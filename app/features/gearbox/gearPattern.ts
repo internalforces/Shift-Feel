@@ -15,9 +15,11 @@ const GEAR_POSITIONS: Record<Gear, NormalizedPosition> = {
   5: { x: 0.82, y: 0.2 },
 };
 
-const COLUMN_TOLERANCE = 0.14;
-const ROW_TOLERANCE = 0.16;
-const NEUTRAL_HALF_HEIGHT = 0.11;
+// Touch targets deliberately overlap slightly so a casual drag still settles
+// into the nearest visible gear gate instead of rejecting the shift.
+const COLUMN_TOLERANCE = 0.17;
+const ROW_TOLERANCE = 0.18;
+const NEUTRAL_HALF_HEIGHT = 0.15;
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 const GATE_COLUMNS = [0.18, 0.5, 0.82] as const;
@@ -73,7 +75,7 @@ export function gearFromPosition(position: NormalizedPosition): Gear | null {
 export function constrainToGearPattern(
   position: NormalizedPosition,
 ): NormalizedPosition {
-  if (Math.abs(position.y - 0.5) <= NEUTRAL_HALF_HEIGHT + 0.02) {
+  if (Math.abs(position.y - 0.5) <= NEUTRAL_HALF_HEIGHT) {
     return { x: Math.min(0.82, Math.max(0.18, position.x)), y: 0.5 };
   }
 

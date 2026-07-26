@@ -11,6 +11,7 @@ import {
   INITIAL_VEHICLE_STATE,
   requestGear,
   restartEngine,
+  stopEngine as stopVehicleEngine,
   stepSimulation,
   type DriverInput,
   type Gear,
@@ -18,9 +19,21 @@ import {
 
 const SIMULATION_INTERVAL_MS = 50;
 
+function runAudioTask(task: Promise<unknown>): void {
+  task.catch(error => {
+    if (__DEV__) {
+      console.warn('Engine audio lifecycle task failed', error);
+    }
+  });
+}
+
 export function useVehicleSimulation() {
   const [vehicle, setVehicle] = useState(INITIAL_VEHICLE_STATE);
-  const [input, setInput] = useState<DriverInput>({ throttle: 0, clutch: 0 });
+  const [input, setInput] = useState<DriverInput>({
+    throttle: 0,
+    clutch: 0,
+    brake: 0,
+  });
   const inputRef = useRef(input);
   const vehicleRef = useRef(vehicle);
   vehicleRef.current = vehicle;
@@ -37,6 +50,9 @@ export function useVehicleSimulation() {
     let mounted = true;
 
     const startAndSyncAudio = async () => {
+      if (!vehicleRef.current.engineRunning) {
+        return;
+      }
       const started = await startEngineAudio();
       if (mounted && started) {
         const current = vehicleRef.current;
@@ -44,7 +60,7 @@ export function useVehicleSimulation() {
       }
     };
 
-    void startAndSyncAudio();
+    runAudioTask(startAndSyncAudio());
     const appStateSubscription = AppState.addEventListener(
       'change',
       nextState => {
@@ -52,9 +68,9 @@ export function useVehicleSimulation() {
           return;
         }
         if (nextState === 'active') {
-          void startAndSyncAudio();
+          runAudioTask(startAndSyncAudio());
         } else {
-          void stopEngineAudio();
+          runAudioTask(stopEngineAudio());
         }
       },
     );
@@ -62,13 +78,19 @@ export function useVehicleSimulation() {
     return () => {
       mounted = false;
       appStateSubscription.remove();
-      void stopEngineAudio();
+      runAudioTask(stopEngineAudio());
     };
   }, []);
 
   useEffect(() => {
     syncEngineAudio(vehicle.rpm, vehicle.feedback);
   }, [vehicle.rpm, vehicle.feedback]);
+
+  useEffect(() => {
+    if (!vehicle.engineRunning) {
+      runAudioTask(stopEngineAudio());
+    }
+  }, [vehicle.engineRunning]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -101,7 +123,23 @@ export function useVehicleSimulation() {
     const next = restartEngine(vehicleRef.current);
     vehicleRef.current = next;
     setVehicle(next);
+    if (next.engineRunning) {
+      runAudioTask(
+        startEngineAudio().then(started => {
+          if (started) {
+            syncEngineAudio(next.rpm, next.feedback);
+          }
+        }),
+      );
+    }
   }, []);
 
-  return { vehicle, input, updateInput, selectGear, startEngine };
+  const stopEngine = useCallback(() => {
+    const next = stopVehicleEngine(vehicleRef.current);
+    vehicleRef.current = next;
+    setVehicle(next);
+    runAudioTask(stopEngineAudio());
+  }, []);
+
+  return { vehicle, input, updateInput, selectGear, startEngine, stopEngine };
 }

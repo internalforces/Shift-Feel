@@ -36,20 +36,39 @@ cp -R "$IOS_SDK_ROOT/api" "$DEST_ROOT/vendor/"
 
 CORE_XCFRAMEWORK="$DEST_ROOT/vendor/api/core/lib/ios/fmod.xcframework"
 STUDIO_XCFRAMEWORK="$DEST_ROOT/vendor/api/studio/lib/ios/fmodstudio.xcframework"
+XCFRAMEWORK_INPUT_ROOT="$DEST_ROOT/vendor/.xcframework-inputs"
 rm -rf "$CORE_XCFRAMEWORK" "$STUDIO_XCFRAMEWORK"
-mkdir -p "$(dirname "$CORE_XCFRAMEWORK")" "$(dirname "$STUDIO_XCFRAMEWORK")"
+mkdir -p \
+  "$(dirname "$CORE_XCFRAMEWORK")" \
+  "$(dirname "$STUDIO_XCFRAMEWORK")" \
+  "$XCFRAMEWORK_INPUT_ROOT/core/iphoneos" \
+  "$XCFRAMEWORK_INPUT_ROOT/core/iphonesimulator" \
+  "$XCFRAMEWORK_INPUT_ROOT/studio/iphoneos" \
+  "$XCFRAMEWORK_INPUT_ROOT/studio/iphonesimulator"
+
+# CocoaPods requires every architecture slice in an XCFramework to expose the
+# same binary name. The FMOD SDK names its device and simulator archives with
+# platform suffixes, so stage matching names before packaging them.
+cp "$IOS_SDK_ROOT/api/core/lib/libfmod_iphoneos.a" \
+  "$XCFRAMEWORK_INPUT_ROOT/core/iphoneos/libfmod.a"
+cp "$IOS_SDK_ROOT/api/core/lib/libfmod_iphonesimulator.a" \
+  "$XCFRAMEWORK_INPUT_ROOT/core/iphonesimulator/libfmod.a"
+cp "$IOS_SDK_ROOT/api/studio/lib/libfmodstudio_iphoneos.a" \
+  "$XCFRAMEWORK_INPUT_ROOT/studio/iphoneos/libfmodstudio.a"
+cp "$IOS_SDK_ROOT/api/studio/lib/libfmodstudio_iphonesimulator.a" \
+  "$XCFRAMEWORK_INPUT_ROOT/studio/iphonesimulator/libfmodstudio.a"
 
 xcodebuild -create-xcframework \
-  -library "$IOS_SDK_ROOT/api/core/lib/libfmod_iphoneos.a" \
+  -library "$XCFRAMEWORK_INPUT_ROOT/core/iphoneos/libfmod.a" \
   -headers "$IOS_SDK_ROOT/api/core/inc" \
-  -library "$IOS_SDK_ROOT/api/core/lib/libfmod_iphonesimulator.a" \
+  -library "$XCFRAMEWORK_INPUT_ROOT/core/iphonesimulator/libfmod.a" \
   -headers "$IOS_SDK_ROOT/api/core/inc" \
   -output "$CORE_XCFRAMEWORK"
 
 xcodebuild -create-xcframework \
-  -library "$IOS_SDK_ROOT/api/studio/lib/libfmodstudio_iphoneos.a" \
+  -library "$XCFRAMEWORK_INPUT_ROOT/studio/iphoneos/libfmodstudio.a" \
   -headers "$IOS_SDK_ROOT/api/studio/inc" \
-  -library "$IOS_SDK_ROOT/api/studio/lib/libfmodstudio_iphonesimulator.a" \
+  -library "$XCFRAMEWORK_INPUT_ROOT/studio/iphonesimulator/libfmodstudio.a" \
   -headers "$IOS_SDK_ROOT/api/studio/inc" \
   -output "$STUDIO_XCFRAMEWORK"
 

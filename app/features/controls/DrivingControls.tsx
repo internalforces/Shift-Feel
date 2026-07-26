@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   PanResponder,
   StyleSheet,
@@ -22,14 +22,17 @@ import { pedalValuesFromTouches } from '../pedals/pedalMath';
 interface DrivingControlsProps {
   selectedGear: Gear;
   clutch: number;
+  brake: number;
   throttle: number;
   onSelectGear: (gear: Gear) => boolean;
   onClutchChange: (value: number) => void;
+  onBrakeChange: (value: number) => void;
   onThrottleChange: (value: number) => void;
+  compact?: boolean;
 }
 
 type Region = LayoutRectangle;
-type PedalSide = 'clutch' | 'throttle';
+type PedalSide = 'clutch' | 'brake' | 'throttle';
 
 const contains = (region: Region, x: number, y: number) =>
   x >= region.x &&
@@ -40,10 +43,13 @@ const contains = (region: Region, x: number, y: number) =>
 export function DrivingControls({
   selectedGear,
   clutch,
+  brake,
   throttle,
   onSelectGear,
   onClutchChange,
+  onBrakeChange,
   onThrottleChange,
+  compact = false,
 }: DrivingControlsProps) {
   const [position, setPosition] = useState<NormalizedPosition>(
     positionForGear(selectedGear),
@@ -52,20 +58,22 @@ export function DrivingControls({
   const gearContainerRef = useRef<Region | null>(null);
   const gearPatternRef = useRef<Region | null>(null);
   const pedalRegionRef = useRef<Region | null>(null);
-  const gearTouchIdRef = useRef<number | null>(null);
-  const pedalTouchSidesRef = useRef(new Map<number, PedalSide>());
+  const gearTouchIdRef = useRef<string | null>(null);
+  const pedalTouchSidesRef = useRef(new Map<string, PedalSide>());
   const positionRef = useRef(position);
   const rawPositionRef = useRef(position);
   const selectedGearRef = useRef(selectedGear);
   const callbacksRef = useRef({
     onSelectGear,
     onClutchChange,
+    onBrakeChange,
     onThrottleChange,
   });
   selectedGearRef.current = selectedGear;
   callbacksRef.current = {
     onSelectGear,
     onClutchChange,
+    onBrakeChange,
     onThrottleChange,
   };
 
@@ -115,10 +123,7 @@ export function DrivingControls({
   const releaseGear = () => {
     gearTouchIdRef.current = null;
     const nextGear = gearFromPosition(rawPositionRef.current);
-    if (
-      nextGear === null ||
-      !callbacksRef.current.onSelectGear(nextGear)
-    ) {
+    if (nextGear === null || !callbacksRef.current.onSelectGear(nextGear)) {
       resetGear(true);
       return;
     }
@@ -175,9 +180,12 @@ export function DrivingControls({
           !pedalTouchSidesRef.current.has(touch.identifier) &&
           contains(pedalRegion, touch.locationX, touch.locationY)
         ) {
-          const side =
-            touch.locationX < pedalRegion.x + pedalRegion.width / 2
+          const relativeX = touch.locationX - pedalRegion.x;
+          const side: PedalSide =
+            relativeX < pedalRegion.width / 3
               ? 'clutch'
+              : relativeX < (pedalRegion.width * 2) / 3
+              ? 'brake'
               : 'throttle';
           pedalTouchSidesRef.current.set(touch.identifier, side);
         }
@@ -194,8 +202,10 @@ export function DrivingControls({
           {
             locationX:
               side === 'clutch'
-                ? pedalRegion.width * 0.25
-                : pedalRegion.width * 0.75,
+                ? pedalRegion.width / 6
+                : side === 'brake'
+                ? pedalRegion.width / 2
+                : (pedalRegion.width * 5) / 6,
             locationY: touch.locationY - pedalRegion.y,
           },
         ];
@@ -206,6 +216,7 @@ export function DrivingControls({
         pedalRegion.height,
       );
       callbacksRef.current.onClutchChange(values.clutch);
+      callbacksRef.current.onBrakeChange(values.brake);
       callbacksRef.current.onThrottleChange(values.throttle);
     }
   };
@@ -237,40 +248,53 @@ export function DrivingControls({
     syncTouches(event, false);
   };
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: event => syncTouches(event, true),
-        onPanResponderStart: event => syncTouches(event, true),
-        onPanResponderMove: event => syncTouches(event, false),
-        onPanResponderEnd: handleEnd,
-        onPanResponderRelease: () => {
-          if (gearTouchIdRef.current !== null) {
-            releaseGear();
-          }
-          pedalTouchSidesRef.current.clear();
-          callbacksRef.current.onClutchChange(0);
-          callbacksRef.current.onThrottleChange(0);
-        },
-        onPanResponderTerminate: () => {
-          cancelGear();
-          pedalTouchSidesRef.current.clear();
-          callbacksRef.current.onClutchChange(0);
-          callbacksRef.current.onThrottleChange(0);
-        },
-        onPanResponderTerminationRequest: () =>
-          gearTouchIdRef.current === null &&
-          pedalTouchSidesRef.current.size === 0,
-      }),
-    [],
+  const panResponderRef = useRef<ReturnType<typeof PanResponder.create> | null>(
+    null,
   );
+  if (!panResponderRef.current) {
+    panResponderRef.current = PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: event => syncTouches(event, true),
+      onPanResponderStart: event => syncTouches(event, true),
+      onPanResponderMove: event => syncTouches(event, false),
+      onPanResponderEnd: handleEnd,
+      onPanResponderRelease: event => {
+        // React Native can emit a release while another finger is still held.
+        // Keep that pedal active until the final touch leaves the control area.
+        if (event.nativeEvent.touches.length > 0) {
+          return;
+        }
+        if (gearTouchIdRef.current !== null) {
+          releaseGear();
+        }
+        pedalTouchSidesRef.current.clear();
+        callbacksRef.current.onClutchChange(0);
+        callbacksRef.current.onBrakeChange(0);
+        callbacksRef.current.onThrottleChange(0);
+      },
+      onPanResponderTerminate: () => {
+        cancelGear();
+        pedalTouchSidesRef.current.clear();
+        callbacksRef.current.onClutchChange(0);
+        callbacksRef.current.onBrakeChange(0);
+        callbacksRef.current.onThrottleChange(0);
+      },
+      onPanResponderTerminationRequest: () =>
+        gearTouchIdRef.current === null &&
+        pedalTouchSidesRef.current.size === 0,
+    });
+  }
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
+    <View
+      style={[styles.container, compact && styles.compactContainer]}
+      {...panResponderRef.current.panHandlers}
+    >
       <View
         pointerEvents="none"
+        style={compact && styles.gearArea}
+        testID="gear-input-region"
         onLayout={event => {
           gearContainerRef.current = event.nativeEvent.layout;
         }}
@@ -282,15 +306,23 @@ export function DrivingControls({
           onPatternLayout={layout => {
             gearPatternRef.current = layout;
           }}
+          compact={compact}
         />
       </View>
       <View
         pointerEvents="none"
+        style={compact && styles.pedalArea}
+        testID="pedal-input-region"
         onLayout={event => {
           pedalRegionRef.current = event.nativeEvent.layout;
         }}
       >
-        <PedalControls clutch={clutch} throttle={throttle} />
+        <PedalControls
+          clutch={clutch}
+          brake={brake}
+          throttle={throttle}
+          compact={compact}
+        />
       </View>
     </View>
   );
@@ -302,4 +334,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 16,
   },
+  compactContainer: { flexDirection: 'row-reverse', gap: 10, marginTop: 8 },
+  gearArea: { flex: 1.2 },
+  pedalArea: { flex: 0.8 },
 });

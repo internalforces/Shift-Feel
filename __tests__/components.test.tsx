@@ -1,8 +1,10 @@
 import React from 'react';
+import { Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 
 import { DrivingControls } from '../app/features/controls/DrivingControls';
 import { Dashboard } from '../app/features/dashboard/Dashboard';
+import { PedalControls } from '../app/features/pedals/PedalControls';
 
 const layoutEvent = (x: number, y: number, width: number, height: number) => ({
   nativeEvent: { layout: { x, y, width, height } },
@@ -14,14 +16,38 @@ type TestTouch = {
   locationY: number;
 };
 
-const touchEvent = (
-  touches: TestTouch[],
-  changedTouches: TestTouch[] = [],
-) => ({ nativeEvent: { touches, changedTouches } });
+const touchEvent = (touches: TestTouch[], changedTouches: TestTouch[] = []) => {
+  const touchBank = touches.reduce<Array<Record<string, unknown> | null>>(
+    (bank, touch) => {
+      bank[touch.identifier] = {
+        touchActive: true,
+        currentPageX: touch.locationX,
+        currentPageY: touch.locationY,
+        previousPageX: touch.locationX,
+        previousPageY: touch.locationY,
+        currentTimeStamp: 1,
+      };
+      return bank;
+    },
+    [],
+  );
+
+  return {
+    nativeEvent: { touches, changedTouches },
+    touchHistory: {
+      touchBank,
+      numberActiveTouches: touches.length,
+      indexOfSingleActiveTouch:
+        touches.length === 1 ? touches[0].identifier : -1,
+      mostRecentTimeStamp: 1,
+    },
+  };
+};
 
 async function renderControls() {
   const onSelectGear = jest.fn(() => true);
   const onClutchChange = jest.fn();
+  const onBrakeChange = jest.fn();
   const onThrottleChange = jest.fn();
   let renderer!: ReactTestRenderer.ReactTestRenderer;
 
@@ -30,21 +56,27 @@ async function renderControls() {
       <DrivingControls
         selectedGear={0}
         clutch={0}
+        brake={0}
         throttle={0}
         onSelectGear={onSelectGear}
         onClutchChange={onClutchChange}
+        onBrakeChange={onBrakeChange}
         onThrottleChange={onThrottleChange}
       />,
     );
   });
 
-  const layoutNodes = renderer.root.findAll(
-    node => typeof node.props.onLayout === 'function',
-  );
+  const gearRegion = renderer.root.findByProps({ testID: 'gear-input-region' });
+  const gearPattern = renderer.root.findByProps({
+    accessibilityLabel: 'H-pattern gear lever',
+  });
+  const pedalRegion = renderer.root.findByProps({
+    testID: 'pedal-input-region',
+  });
   await ReactTestRenderer.act(() => {
-    layoutNodes[0].props.onLayout(layoutEvent(0, 0, 300, 230));
-    layoutNodes[1].props.onLayout(layoutEvent(16, 40, 268, 190));
-    layoutNodes[2].props.onLayout(layoutEvent(0, 242, 300, 150));
+    gearRegion.props.onLayout(layoutEvent(0, 0, 300, 230));
+    gearPattern.props.onLayout(layoutEvent(16, 40, 268, 190));
+    pedalRegion.props.onLayout(layoutEvent(0, 242, 300, 150));
   });
 
   const responder = renderer.root.find(
@@ -55,6 +87,7 @@ async function renderControls() {
     responder,
     onSelectGear,
     onClutchChange,
+    onBrakeChange,
     onThrottleChange,
   };
 }
@@ -69,40 +102,74 @@ describe('driving controls', () => {
     });
 
     expect(renderer.toJSON()).toBeTruthy();
+    expect(
+      renderer.root.findAll(
+        node =>
+          node.props.children === '시동이 꺼졌습니다 — N단으로 변속하세요',
+      ),
+    ).not.toHaveLength(0);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
+  it('renders manual engine-off feedback separately from a stall', async () => {
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(() => {
+      renderer = ReactTestRenderer.create(
+        <Dashboard rpm={0} speed={0} gear={0} feedback="off" />,
+      );
+    });
+
+    expect(
+      renderer.root.findAll(
+        node =>
+          node.props.children === '시동이 꺼져 있습니다 — 시동 걸기를 누르세요',
+      ),
+    ).not.toHaveLength(0);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
+  it('puts pedal percentages in the tracks and labels the accelerator', async () => {
+    let renderer!: ReactTestRenderer.ReactTestRenderer;
+    await ReactTestRenderer.act(() => {
+      renderer = ReactTestRenderer.create(
+        <PedalControls clutch={0.5} brake={0.25} throttle={0.75} compact />,
+      );
+    });
+
+    expect(
+      renderer.root.findAllByType(Text).map(node => node.props.children),
+    ).toEqual(
+      expect.arrayContaining([
+        'CLUTCH',
+        'BRAKE',
+        'ACCELERATOR',
+        '50%',
+        '25%',
+        '75%',
+      ]),
+    );
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
   it('shifts while a separate touch keeps the clutch pressed', async () => {
-    const {
-      renderer,
-      responder,
-      onSelectGear,
-      onClutchChange,
-    } = await renderControls();
+    const { renderer, responder, onSelectGear, onClutchChange } =
+      await renderControls();
     const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
     const gearTouch = { identifier: 2, locationX: 64, locationY: 80 };
 
     await ReactTestRenderer.act(() => {
-      responder.props.onResponderGrant(
-        touchEvent([clutchTouch, gearTouch]),
-      );
+      responder.props.onResponderGrant(touchEvent([clutchTouch, gearTouch]));
       responder.props.onResponderEnd(touchEvent([clutchTouch]));
     });
 
-    expect(onClutchChange).toHaveBeenCalledWith(
-      expect.any(Number),
-    );
+    expect(onClutchChange).toHaveBeenCalledWith(expect.any(Number));
     expect(onSelectGear).toHaveBeenCalledWith(1);
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
   it('commits the gear before clearing a clutch touch that ends with it', async () => {
-    const {
-      renderer,
-      responder,
-      onSelectGear,
-      onClutchChange,
-    } = await renderControls();
+    const { renderer, responder, onSelectGear, onClutchChange } =
+      await renderControls();
     const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
     const gearTouch = { identifier: 2, locationX: 64, locationY: 80 };
     const callOrder: string[] = [];
@@ -127,6 +194,50 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
+  it('keeps throttle active when the clutch finger is released first', async () => {
+    const { renderer, responder, onClutchChange, onThrottleChange } =
+      await renderControls();
+    const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
+    const throttleTouch = { identifier: 2, locationX: 250, locationY: 270 };
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(
+        touchEvent([clutchTouch, throttleTouch]),
+      );
+      responder.props.onResponderEnd(
+        touchEvent([throttleTouch], [clutchTouch]),
+      );
+      responder.props.onResponderRelease(
+        touchEvent([throttleTouch], [clutchTouch]),
+      );
+    });
+
+    expect(onClutchChange).toHaveBeenLastCalledWith(0);
+    expect(onThrottleChange).toHaveBeenLastCalledWith(expect.any(Number));
+    expect(onThrottleChange).not.toHaveBeenLastCalledWith(0);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
+  it('tracks brake pressure independently from the clutch and throttle', async () => {
+    const { renderer, responder, onBrakeChange, onThrottleChange } =
+      await renderControls();
+    const brakeTouch = { identifier: 1, locationX: 150, locationY: 270 };
+    const throttleTouch = { identifier: 2, locationX: 250, locationY: 270 };
+
+    await ReactTestRenderer.act(() => {
+      responder.props.onResponderGrant(touchEvent([brakeTouch, throttleTouch]));
+      responder.props.onResponderEnd(touchEvent([throttleTouch], [brakeTouch]));
+      responder.props.onResponderRelease(
+        touchEvent([throttleTouch], [brakeTouch]),
+      );
+    });
+
+    expect(onBrakeChange).toHaveBeenLastCalledWith(0);
+    expect(onThrottleChange).toHaveBeenLastCalledWith(expect.any(Number));
+    expect(onThrottleChange).not.toHaveBeenLastCalledWith(0);
+    await ReactTestRenderer.act(() => renderer.unmount());
+  });
+
   it('uses the lifted gear touch position for a quick drag', async () => {
     const { renderer, responder, onSelectGear } = await renderControls();
     const startInNeutral = { identifier: 2, locationX: 150, locationY: 135 };
@@ -141,16 +252,16 @@ describe('driving controls', () => {
     await ReactTestRenderer.act(() => renderer.unmount());
   });
 
-  it('rejects a raw release between two gear gates', async () => {
+  it('rejects a raw release outside the forgiving gear target', async () => {
     const { renderer, responder, onSelectGear } = await renderControls();
-    const betweenGates = {
+    const outsideGate = {
       identifier: 2,
-      locationX: 16 + 268 * 0.34,
+      locationX: 16 + 268 * 0.99,
       locationY: 40 + 190 * 0.2,
     };
 
     await ReactTestRenderer.act(() => {
-      responder.props.onResponderGrant(touchEvent([betweenGates]));
+      responder.props.onResponderGrant(touchEvent([outsideGate]));
       responder.props.onResponderEnd(touchEvent([]));
     });
 
@@ -159,12 +270,8 @@ describe('driving controls', () => {
   });
 
   it('keeps a pedal pressed above its edge without claiming a gear', async () => {
-    const {
-      renderer,
-      responder,
-      onSelectGear,
-      onClutchChange,
-    } = await renderControls();
+    const { renderer, responder, onSelectGear, onClutchChange } =
+      await renderControls();
     const clutchTouch = { identifier: 1, locationX: 50, locationY: 270 };
     const abovePedal = { identifier: 1, locationX: 64, locationY: 20 };
 

@@ -3,24 +3,36 @@ import {
   INITIAL_VEHICLE_STATE,
   requestGear,
   restartEngine,
+  stopEngine,
   stepSimulation,
   type VehicleState,
 } from '../app/features/engine-sim/simulation';
 
+const RUNNING_VEHICLE_STATE = restartEngine(INITIAL_VEHICLE_STATE);
+
 describe('vehicle simulation', () => {
+  it('starts in neutral with the engine off', () => {
+    expect(INITIAL_VEHICLE_STATE).toMatchObject({
+      gear: 0,
+      rpm: 0,
+      engineRunning: false,
+      feedback: 'off',
+    });
+  });
+
   it('raises RPM when throttle is held in neutral', () => {
     const next = stepSimulation(
-      INITIAL_VEHICLE_STATE,
-      { throttle: 1, clutch: 0 },
+      RUNNING_VEHICLE_STATE,
+      { throttle: 1, clutch: 0, brake: 0 },
       0.1,
     );
 
-    expect(next.rpm).toBeGreaterThan(INITIAL_VEHICLE_STATE.rpm);
+    expect(next.rpm).toBeGreaterThan(RUNNING_VEHICLE_STATE.rpm);
     expect(next.speed).toBe(0);
   });
 
   it('rejects a gear change when the clutch is not pressed', () => {
-    const next = requestGear(INITIAL_VEHICLE_STATE, 1, 0);
+    const next = requestGear(RUNNING_VEHICLE_STATE, 1, 0);
 
     expect(next.gear).toBe(0);
     expect(next.feedback).toBe('grind');
@@ -28,7 +40,7 @@ describe('vehicle simulation', () => {
 
   it('treats releasing the lever in the current gear as a no-op', () => {
     const current = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       gear: 2 as const,
       feedback: 'smooth' as const,
     };
@@ -37,11 +49,15 @@ describe('vehicle simulation', () => {
   });
 
   it('selects first gear with the clutch pressed and accelerates', () => {
-    const inFirst = requestGear(INITIAL_VEHICLE_STATE, 1, 1);
+    const inFirst = requestGear(RUNNING_VEHICLE_STATE, 1, 1);
     let moving = inFirst;
 
     for (let index = 0; index < 30; index += 1) {
-      moving = stepSimulation(moving, { throttle: 1, clutch: 0 }, 0.1);
+      moving = stepSimulation(
+        moving,
+        { throttle: 1, clutch: 0, brake: 0 },
+        0.1,
+      );
     }
 
     expect(inFirst.gear).toBe(1);
@@ -50,12 +66,43 @@ describe('vehicle simulation', () => {
   });
 
   it('stalls when first gear is engaged at rest without throttle', () => {
-    const inFirst = requestGear(INITIAL_VEHICLE_STATE, 1, 1);
-    const stalled = stepSimulation(inFirst, { throttle: 0, clutch: 0 }, 0.1);
+    const inFirst = requestGear(RUNNING_VEHICLE_STATE, 1, 1);
+    const stalled = stepSimulation(
+      inFirst,
+      { throttle: 0, clutch: 0, brake: 0 },
+      0.1,
+    );
 
     expect(stalled.engineRunning).toBe(false);
     expect(stalled.feedback).toBe('stalled');
     expect(stalled.rpm).toBe(0);
+  });
+
+  it.each([3, 4, 5] as const)(
+    'stalls when starting directly in gear %i',
+    gear => {
+      const stalled = requestGear(RUNNING_VEHICLE_STATE, gear, 1);
+
+      expect(stalled).toMatchObject({
+        gear,
+        rpm: 0,
+        engineRunning: false,
+        feedback: 'stalled',
+      });
+    },
+  );
+
+  it('allows a direct third-gear shift while already moving', () => {
+    const coastingInNeutral = {
+      ...RUNNING_VEHICLE_STATE,
+      rpm: 2200,
+      speed: 35,
+    };
+
+    const shifted = requestGear(coastingInNeutral, 3, 1);
+
+    expect(shifted).toMatchObject({ gear: 3, engineRunning: true });
+    expect(shifted.feedback).not.toBe('stalled');
   });
 
   it('restarts a stalled engine at idle RPM', () => {
@@ -67,12 +114,64 @@ describe('vehicle simulation', () => {
     });
 
     expect(restarted.engineRunning).toBe(true);
-    expect(restarted.rpm).toBe(INITIAL_VEHICLE_STATE.rpm);
+    expect(restarted.rpm).toBe(ENGINE_CONFIG.idleRpm);
     expect(restarted.feedback).toBe('ready');
   });
 
+  it('requires neutral before restarting a stalled engine', () => {
+    const stalledInFirst = {
+      ...RUNNING_VEHICLE_STATE,
+      gear: 1 as const,
+      rpm: 0,
+      engineRunning: false,
+      feedback: 'stalled' as const,
+    };
+
+    expect(restartEngine(stalledInFirst)).toEqual(stalledInFirst);
+    expect(requestGear(stalledInFirst, 0, 0)).toMatchObject({
+      gear: 0,
+      feedback: 'stalled',
+    });
+  });
+
+  it('turns the engine off without reporting a stall', () => {
+    const stopped = stopEngine({
+      ...INITIAL_VEHICLE_STATE,
+      speed: 12,
+      gear: 2,
+      rpm: 2800,
+    });
+
+    expect(stopped).toMatchObject({
+      engineRunning: false,
+      rpm: 0,
+      speed: 12,
+      gear: 2,
+      feedback: 'off',
+    });
+    expect(
+      stepSimulation(stopped, { throttle: 0, clutch: 0, brake: 0 }, 0.1),
+    ).toMatchObject({ feedback: 'off', engineRunning: false });
+  });
+
+  it('keeps manual engine-off feedback while changing gears before restarting', () => {
+    const stopped = stopEngine({
+      ...RUNNING_VEHICLE_STATE,
+      rpm: 2400,
+    });
+    const inFirst = requestGear(stopped, 1, 1);
+    const next = stepSimulation(
+      inFirst,
+      { throttle: 0, clutch: 0, brake: 0 },
+      0.1,
+    );
+
+    expect(inFirst).toMatchObject({ gear: 1, feedback: 'off' });
+    expect(next).toMatchObject({ engineRunning: false, feedback: 'off' });
+  });
+
   it('always allows returning to neutral', () => {
-    const inFirst = requestGear(INITIAL_VEHICLE_STATE, 1, 1);
+    const inFirst = requestGear(RUNNING_VEHICLE_STATE, 1, 1);
     const neutral = requestGear(inFirst, 0, 0);
 
     expect(neutral.gear).toBe(0);
@@ -81,7 +180,7 @@ describe('vehicle simulation', () => {
 
   it('rejects a downshift above the target gear speed limit', () => {
     const cruising = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       rpm: 4200,
       speed: 100,
       gear: 5 as const,
@@ -89,7 +188,7 @@ describe('vehicle simulation', () => {
     const rejected = requestGear(cruising, 1, 1);
     const next = stepSimulation(
       rejected,
-      { throttle: 0, clutch: 1 },
+      { throttle: 0, clutch: 1, brake: 0 },
       0.1,
     );
 
@@ -100,7 +199,7 @@ describe('vehicle simulation', () => {
 
   it('rejects a shift that would exceed redline below the gear speed limit', () => {
     const cruising = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       rpm: 3500,
       speed: 70,
       gear: 5 as const,
@@ -113,7 +212,7 @@ describe('vehicle simulation', () => {
 
   it('caps acceleration at the speed represented by redline RPM', () => {
     let inSecond: VehicleState = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       rpm: 6500,
       speed: 65,
       gear: 2 as const,
@@ -122,7 +221,7 @@ describe('vehicle simulation', () => {
     for (let index = 0; index < 100; index += 1) {
       inSecond = stepSimulation(
         inSecond,
-        { throttle: 1, clutch: 0 },
+        { throttle: 1, clutch: 0, brake: 0 },
         0.1,
       );
     }
@@ -133,7 +232,7 @@ describe('vehicle simulation', () => {
   });
 
   it('flags a large RPM mismatch as a jerk', () => {
-    const highRevState = { ...INITIAL_VEHICLE_STATE, rpm: 6000 };
+    const highRevState = { ...RUNNING_VEHICLE_STATE, rpm: 6000 };
     const shifted = requestGear(highRevState, 1, 1);
 
     expect(shifted.gear).toBe(1);
@@ -148,17 +247,25 @@ describe('vehicle simulation', () => {
       engineRunning: false,
       feedback: 'stalled' as const,
     };
-    const next = stepSimulation(rollingStall, { throttle: 1, clutch: 0 }, 0.1);
+    const next = stepSimulation(
+      rollingStall,
+      { throttle: 1, clutch: 0, brake: 0 },
+      0.1,
+    );
 
     expect(next.speed).toBeLessThan(rollingStall.speed);
     expect(next.engineRunning).toBe(false);
   });
 
   it('moves backwards in reverse gear', () => {
-    let reversing = requestGear(INITIAL_VEHICLE_STATE, -1, 1);
+    let reversing = requestGear(RUNNING_VEHICLE_STATE, -1, 1);
 
     for (let index = 0; index < 20; index += 1) {
-      reversing = stepSimulation(reversing, { throttle: 1, clutch: 0 }, 0.1);
+      reversing = stepSimulation(
+        reversing,
+        { throttle: 1, clutch: 0, brake: 0 },
+        0.1,
+      );
     }
 
     expect(reversing.speed).toBeLessThan(0);
@@ -166,13 +273,13 @@ describe('vehicle simulation', () => {
 
   it('preserves reverse momentum when the clutch is disengaged', () => {
     const reversing = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       speed: -8,
       gear: -1 as const,
     };
     const coasting = stepSimulation(
       reversing,
-      { throttle: 0, clutch: 1 },
+      { throttle: 0, clutch: 1, brake: 0 },
       0.1,
     );
 
@@ -182,14 +289,14 @@ describe('vehicle simulation', () => {
 
   it('preserves reverse momentum after shifting to neutral', () => {
     const reversing = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       speed: -8,
       gear: -1 as const,
     };
     const neutral = requestGear(reversing, 0, 1);
     const coasting = stepSimulation(
       neutral,
-      { throttle: 0, clutch: 0 },
+      { throttle: 0, clutch: 0, brake: 0 },
       0.1,
     );
 
@@ -200,14 +307,14 @@ describe('vehicle simulation', () => {
 
   it('does not stall when throttle is released while reversing at speed', () => {
     const reversing = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       rpm: 1400,
       speed: -8,
       gear: -1 as const,
     };
     const coasting = stepSimulation(
       reversing,
-      { throttle: 0, clutch: 0 },
+      { throttle: 0, clutch: 0, brake: 0 },
       0.1,
     );
 
@@ -216,20 +323,31 @@ describe('vehicle simulation', () => {
     expect(coasting.speed).toBeLessThan(0);
   });
 
-  it('flags reverse re-engagement with a large RPM mismatch', () => {
+  it('requires a full stop before engaging reverse from neutral', () => {
     const reversingInNeutral = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       rpm: 850,
       speed: -20,
     };
     const shifted = requestGear(reversingInNeutral, -1, 1);
 
-    expect(shifted.gear).toBe(-1);
-    expect(shifted.feedback).toBe('jerk');
+    expect(shifted.gear).toBe(0);
+    expect(shifted.feedback).toBe('unsafe');
+  });
+
+  it('requires neutral before changing from a forward gear to reverse', () => {
+    const stoppedInFirst = { ...RUNNING_VEHICLE_STATE, gear: 1 as const };
+    const rejected = requestGear(stoppedInFirst, -1, 1);
+    const neutral = requestGear(stoppedInFirst, 0, 1);
+    const reversed = requestGear(neutral, -1, 1);
+
+    expect(rejected).toMatchObject({ gear: 1, feedback: 'unsafe' });
+    expect(neutral).toMatchObject({ gear: 0, feedback: 'ready' });
+    expect(reversed).toMatchObject({ gear: -1 });
   });
 
   it('rejects reverse while the vehicle is moving forward', () => {
-    const movingForward = { ...INITIAL_VEHICLE_STATE, speed: 12 };
+    const movingForward = { ...RUNNING_VEHICLE_STATE, speed: 12 };
     const shifted = requestGear(movingForward, -1, 1);
 
     expect(shifted.gear).toBe(0);
@@ -238,7 +356,7 @@ describe('vehicle simulation', () => {
 
   it('rejects a forward gear while the vehicle is reversing', () => {
     const movingBackward = {
-      ...INITIAL_VEHICLE_STATE,
+      ...RUNNING_VEHICLE_STATE,
       speed: -8,
       gear: -1 as const,
     };
@@ -246,5 +364,45 @@ describe('vehicle simulation', () => {
 
     expect(shifted.gear).toBe(-1);
     expect(shifted.feedback).toBe('unsafe');
+  });
+
+  it('requires neutral before changing from reverse to a forward gear', () => {
+    const stoppedInReverse = {
+      ...RUNNING_VEHICLE_STATE,
+      gear: -1 as const,
+    };
+    const rejected = requestGear(stoppedInReverse, 1, 1);
+
+    expect(rejected).toMatchObject({ gear: -1, feedback: 'unsafe' });
+  });
+
+  it('brakes a moving vehicle without reversing its direction', () => {
+    const moving = { ...RUNNING_VEHICLE_STATE, speed: 20 };
+
+    const next = stepSimulation(
+      moving,
+      { throttle: 0, clutch: 1, brake: 1 },
+      0.1,
+    );
+
+    expect(next.speed).toBeLessThan(moving.speed);
+    expect(next.speed).toBeGreaterThanOrEqual(0);
+  });
+
+  it('brakes a reversing vehicle toward a stop', () => {
+    const reversing = {
+      ...RUNNING_VEHICLE_STATE,
+      speed: -20,
+      gear: -1 as const,
+    };
+
+    const next = stepSimulation(
+      reversing,
+      { throttle: 0, clutch: 1, brake: 1 },
+      0.1,
+    );
+
+    expect(next.speed).toBeGreaterThan(reversing.speed);
+    expect(next.speed).toBeLessThanOrEqual(0);
   });
 });

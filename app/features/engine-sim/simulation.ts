@@ -3,6 +3,7 @@ import { assessShift } from './shiftTiming';
 
 export type Gear = -1 | 0 | 1 | 2 | 3 | 4 | 5;
 export type Feedback =
+  | 'off'
   | 'ready'
   | 'smooth'
   | 'jerk'
@@ -21,14 +22,15 @@ export interface VehicleState {
 export interface DriverInput {
   throttle: number;
   clutch: number;
+  brake: number;
 }
 
 export const INITIAL_VEHICLE_STATE: VehicleState = {
-  rpm: ENGINE_CONFIG.idleRpm,
+  rpm: 0,
   speed: 0,
   gear: 0,
-  engineRunning: true,
-  feedback: 'ready',
+  engineRunning: false,
+  feedback: 'off',
 };
 
 const clamp = (value: number, minimum: number, maximum: number) =>
@@ -43,6 +45,11 @@ const approach = (
 
 const applyDrag = (speed: number, amount: number) =>
   Math.sign(speed) * Math.max(0, Math.abs(speed) - amount);
+
+const isStandingStartBeyondSecond = (state: VehicleState, nextGear: Gear) =>
+  state.gear === 0 &&
+  Math.abs(state.speed) <= ENGINE_CONFIG.directionChangeMaxSpeed &&
+  nextGear > ENGINE_CONFIG.maximumStandingStartGear;
 
 const getGearSpeedLimit = (gear: Exclude<Gear, 0>) => {
   const gearConfig = GEAR_CONFIG[gear];
@@ -74,15 +81,36 @@ export function requestGear(
   }
 
   if (nextGear === 0) {
-    return { ...state, gear: 0, feedback: 'ready' };
+    return {
+      ...state,
+      gear: 0,
+      feedback: state.engineRunning ? 'ready' : state.feedback,
+    };
+  }
+
+  if (state.engineRunning && isStandingStartBeyondSecond(state, nextGear)) {
+    return {
+      ...state,
+      gear: nextGear,
+      rpm: 0,
+      engineRunning: false,
+      feedback: 'stalled',
+    };
   }
 
   const assessment = assessShift(state, nextGear, clutchPedal);
   if (assessment.outcome === 'grind' || assessment.outcome === 'unsafe') {
-    return { ...state, feedback: assessment.outcome };
+    return {
+      ...state,
+      feedback: state.engineRunning ? assessment.outcome : state.feedback,
+    };
   }
 
-  return { ...state, gear: nextGear, feedback: assessment.outcome };
+  return {
+    ...state,
+    gear: nextGear,
+    feedback: state.engineRunning ? assessment.outcome : state.feedback,
+  };
 }
 
 /** Advances the deterministic vehicle simulation by a time step in seconds. */
@@ -94,14 +122,19 @@ export function stepSimulation(
   const delta = clamp(deltaSeconds, 0, 0.1);
   const throttle = clamp(rawInput.throttle, 0, 1);
   const clutch = clamp(rawInput.clutch, 0, 1);
+  const brake = clamp(rawInput.brake, 0, 1);
   const engagement = getClutchEngagement(clutch);
+  const resistance =
+    (ENGINE_CONFIG.dragPerSecond +
+      brake * ENGINE_CONFIG.brakeDecelerationPerSecond) *
+    delta;
 
   if (!state.engineRunning) {
     return {
       ...state,
       rpm: 0,
-      speed: applyDrag(state.speed, ENGINE_CONFIG.dragPerSecond * delta),
-      feedback: 'stalled',
+      speed: applyDrag(state.speed, resistance),
+      feedback: state.feedback === 'off' ? 'off' : 'stalled',
     };
   }
 
@@ -118,7 +151,7 @@ export function stepSimulation(
         ENGINE_CONFIG.neutralRpmResponse,
         delta,
       ),
-      speed: applyDrag(state.speed, ENGINE_CONFIG.dragPerSecond * delta),
+      speed: applyDrag(state.speed, resistance),
     };
   }
 
@@ -150,7 +183,7 @@ export function stepSimulation(
   const speedAfterDrive = state.speed + acceleration * direction * delta;
   const speedLimit = getGearSpeedLimit(state.gear);
   const speed = clamp(
-    applyDrag(speedAfterDrive, ENGINE_CONFIG.dragPerSecond * delta),
+    applyDrag(speedAfterDrive, resistance),
     state.gear === -1 ? -speedLimit : 0,
     state.gear === -1 ? 0 : speedLimit,
   );
@@ -162,12 +195,26 @@ export function stepSimulation(
   };
 }
 
-/** Restarts the engine while preserving the selected gear and vehicle speed. */
+/** Restarts only from neutral so the player must make a safe recovery after a stall. */
 export function restartEngine(state: VehicleState): VehicleState {
+  if (state.gear !== 0) {
+    return state;
+  }
+
   return {
     ...state,
     rpm: ENGINE_CONFIG.idleRpm,
     engineRunning: true,
     feedback: 'ready',
+  };
+}
+
+/** Turns the engine off without treating the deliberate action as a stall. */
+export function stopEngine(state: VehicleState): VehicleState {
+  return {
+    ...state,
+    rpm: 0,
+    engineRunning: false,
+    feedback: 'off',
   };
 }
