@@ -19,6 +19,14 @@ import {
 
 const SIMULATION_INTERVAL_MS = 50;
 
+function runAudioTask(task: Promise<unknown>): void {
+  task.catch(error => {
+    if (__DEV__) {
+      console.warn('Engine audio lifecycle task failed', error);
+    }
+  });
+}
+
 export function useVehicleSimulation() {
   const [vehicle, setVehicle] = useState(INITIAL_VEHICLE_STATE);
   const [input, setInput] = useState<DriverInput>({
@@ -52,7 +60,7 @@ export function useVehicleSimulation() {
       }
     };
 
-    void startAndSyncAudio();
+    runAudioTask(startAndSyncAudio());
     const appStateSubscription = AppState.addEventListener(
       'change',
       nextState => {
@@ -60,9 +68,9 @@ export function useVehicleSimulation() {
           return;
         }
         if (nextState === 'active') {
-          void startAndSyncAudio();
+          runAudioTask(startAndSyncAudio());
         } else {
-          void stopEngineAudio();
+          runAudioTask(stopEngineAudio());
         }
       },
     );
@@ -70,7 +78,7 @@ export function useVehicleSimulation() {
     return () => {
       mounted = false;
       appStateSubscription.remove();
-      void stopEngineAudio();
+      runAudioTask(stopEngineAudio());
     };
   }, []);
 
@@ -80,7 +88,7 @@ export function useVehicleSimulation() {
 
   useEffect(() => {
     if (!vehicle.engineRunning) {
-      void stopEngineAudio();
+      runAudioTask(stopEngineAudio());
     }
   }, [vehicle.engineRunning]);
 
@@ -116,11 +124,13 @@ export function useVehicleSimulation() {
     vehicleRef.current = next;
     setVehicle(next);
     if (next.engineRunning) {
-      void startEngineAudio().then(started => {
-        if (started) {
-          syncEngineAudio(next.rpm, next.feedback);
-        }
-      });
+      runAudioTask(
+        startEngineAudio().then(started => {
+          if (started) {
+            syncEngineAudio(next.rpm, next.feedback);
+          }
+        }),
+      );
     }
   }, []);
 
@@ -128,7 +138,7 @@ export function useVehicleSimulation() {
     const next = stopVehicleEngine(vehicleRef.current);
     vehicleRef.current = next;
     setVehicle(next);
-    void stopEngineAudio();
+    runAudioTask(stopEngineAudio());
   }, []);
 
   return { vehicle, input, updateInput, selectGear, startEngine, stopEngine };
