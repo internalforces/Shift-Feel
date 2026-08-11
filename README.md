@@ -1,8 +1,10 @@
 # Shift Feel
 
+[English](README.md) | [한국어](docs/ko/README.md)
+
 Shift Feel is an experimental React Native app for practising the feel of driving a manual-transmission car. It focuses on the interaction between an H-pattern gear selector, clutch, brake, throttle, engine speed, and shift feedback—not lap times or racing.
 
-> The canonical project documentation is in English. A Korean introduction is available in [docs/ko/README.md](docs/ko/README.md).
+> English is the canonical language for the project documentation. The full Korean version is available in [docs/ko/README.md](docs/ko/README.md).
 
 ## Demo
 
