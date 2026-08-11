@@ -4,6 +4,12 @@ Shift Feel is an experimental React Native app for practising the feel of drivin
 
 > The canonical project documentation is in English. A Korean introduction is available in [docs/ko/README.md](docs/ko/README.md).
 
+## Demo
+
+![Shift Feel running in the iPhone simulator](docs/assets/shift-feel-demo.gif)
+
+Captured from the iOS app running in the iPhone 16 Pro simulator.
+
 ## Current capabilities
 
 - Interactive H-pattern selector for reverse and gears 1–5
