@@ -39,7 +39,7 @@
     "@react-native-community/cli-platform-ios": "^20.2.0",
     "@react-native/babel-preset": "0.87.1",
     "@react-native/eslint-config": "0.87.1",
-    "@react-native/jest-preset": "^0.88.0",
+    "@react-native/jest-preset": "0.86.2",
     "@react-native/metro-config": "0.86.2",
     "@react-native/typescript-config": "0.86.1",
     "@types/jest": "^30.0.0",
@@ -47,7 +47,7 @@
     "@types/react-test-renderer": "^19.3.0",
     "eslint": "^9.39.5",
     "jest": "^30.5.2",
-    "prettier": "3.9.6",
+    "prettier": "3.9.10",
     "react-test-renderer": "19.3.0",
     "typescript": "^5.8.3"
   },
