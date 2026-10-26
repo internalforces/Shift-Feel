@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # React Native requires its Jest preset to match the runtime version exactly.
+    groups:
+      react-native:
+        patterns:
+          - react-native
+          - '@react-native/*'
     ignore:
       - dependency-name: '@babel/preset-env'
         update-types: ['version-update:semver-major']
