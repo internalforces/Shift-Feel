@@ -24,7 +24,7 @@ import { useVehicleSimulation } from './app/features/engine-sim/useVehicleSimula
 function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" backgroundColor="#0D1117" />
+      <StatusBar barStyle="light-content" />
       <AppContent />
     </SafeAreaProvider>
   );

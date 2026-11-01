@@ -32,6 +32,8 @@ interface DrivingControlsProps {
 }
 
 type Region = LayoutRectangle;
+type TouchIdentifier =
+  GestureResponderEvent['nativeEvent']['touches'][number]['identifier'];
 type PedalSide = 'clutch' | 'brake' | 'throttle';
 
 const contains = (region: Region, x: number, y: number) =>
@@ -58,8 +60,8 @@ export function DrivingControls({
   const gearContainerRef = useRef<Region | null>(null);
   const gearPatternRef = useRef<Region | null>(null);
   const pedalRegionRef = useRef<Region | null>(null);
-  const gearTouchIdRef = useRef<string | null>(null);
-  const pedalTouchSidesRef = useRef(new Map<string, PedalSide>());
+  const gearTouchIdRef = useRef<TouchIdentifier | null>(null);
+  const pedalTouchSidesRef = useRef(new Map<TouchIdentifier, PedalSide>());
   const positionRef = useRef(position);
   const rawPositionRef = useRef(position);
   const selectedGearRef = useRef(selectedGear);
