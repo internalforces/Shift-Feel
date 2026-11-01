@@ -17,6 +17,9 @@ updates:
       # The React Native lint preset currently supports ESLint 8 and 9.
       - dependency-name: eslint
         update-types: ['version-update:semver-major']
+      # Babel preset-env 7 requires Babel core 7.
+      - dependency-name: '@babel/core'
+        update-types: ['version-update:semver-major']
       - dependency-name: '@babel/preset-env'
         update-types: ['version-update:semver-major']
       - dependency-name: typescript
