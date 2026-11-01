@@ -5,13 +5,18 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # React Native requires its Jest preset to match the runtime version exactly.
+    # Keep the runtime, React, renderer, and Jest preset compatible together.
     groups:
       react-native:
         patterns:
           - react-native
+          - react
+          - react-test-renderer
           - '@react-native/*'
     ignore:
+      # The React Native lint preset currently supports ESLint 8 and 9.
+      - dependency-name: eslint
+        update-types: ['version-update:semver-major']
       - dependency-name: '@babel/preset-env'
         update-types: ['version-update:semver-major']
       - dependency-name: typescript
